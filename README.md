@@ -8,7 +8,6 @@ This repository holds the code for the advanced ICT project (IKT464)
 - Bjarne finner eksempler på bestemmelser med utnyttingsgrad, gammel beregning av utnyttingsgrad og uten utnyttingsgrad
 
 - Lage en model som kan klassifisere hvilke case som gjelder for en bestemmelse:
-
       - Riktig beregning av utnyttingsgrad
   
       - Gammel beregning
