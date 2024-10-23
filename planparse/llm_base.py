@@ -22,7 +22,7 @@ class LLMBase:
     def load_model(self):
         
 
-        tokenizer = AutoTokenizer.from_pretrained(
+        self.tokenizer = AutoTokenizer.from_pretrained(
             self.huggingface_model, 
             padding_side="left"
         )
@@ -38,16 +38,30 @@ class LLMBase:
         
         # Define LoRA config
         config = LoraConfig(
-            r=lora_r,
-            lora_alpha=lora_alpha,
-            target_modules=target_modules,
-            lora_dropout=lora_dropout,
+            lora_dropout=self.config["lora_config"]["lora_dropout"],
+            lora_alpha=self.config["lora_config"]["lora_alpha"],
+            r=self.config["lora_config"]["r"],
             bias="none",
             task_type="CAUSAL_LM"
         )
         
         # Apply PEFT
-        model = get_peft_model(model, config)
-        
-        # Print trainable parameters info
-        print_trainable_parameters(model)
+        self.model = get_peft_model(model, config)
+
+        self.model = self.model.to(self.config["device"])
+
+
+    def init_training(self):
+        self.model.train()
+    
+
+    def init_inference(self):
+        self.model.eval()
+
+
+    def generate(self):
+        pass
+
+
+    def parse_output(self):
+        pass      
