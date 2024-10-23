@@ -4,7 +4,7 @@
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import prepare_model_for_kbit_training, LoraConfig, get_peft_model
-import bitsandbytes as bnb
+from bitsandbytes import BitsAndBytesConfig
 
 class LLMBase:
 
@@ -15,22 +15,32 @@ class LLMBase:
             quantization : int = 8,
             ):
         
+        if quantization not in [4, 8]:
+            raise ValueError("Quantization must be 4 or 8")
+
         self.config = config
         self.huggingface_model = huggingface_model
         self.quantization = quantization
 
     def load_model(self):
         
-
         self.tokenizer = AutoTokenizer.from_pretrained(
             self.huggingface_model, 
             padding_side="left"
         )
-    
+
+        quantization_config = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_compute_dtype=torch.float16,
+        bnb_4bit_quant_type="nf4",  # normalized float 4 for better accuracy
+        bnb_4bit_use_double_quant=True  # nested quantization for memory efficiency
+        )
+
         # Load model in 8-bit
         model = AutoModelForCausalLM.from_pretrained(
             self.huggingface_model,
-            load_in_8bit=True,
+            load_in_8bit=True if self.quantization == 8 else False,
+            quantization_config=quantization_config if self.quantization == 4 else None
         )
         
         # Prepare model for k-bit training
@@ -61,7 +71,6 @@ class LLMBase:
 
     def generate(self):
         pass
-
 
     def parse_output(self):
         pass      
