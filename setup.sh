@@ -7,7 +7,6 @@ sudo apt-get update
 sudo apt-get install -y \
     libleptonica-dev \
     tesseract-ocr \
-    tesseract-ocr-dev \
     libtesseract-dev \
     python3-pil \
     tesseract-ocr-eng \
