@@ -1,0 +1,17 @@
+[INST] Analyser teksten for å finne referanser til "utnyttingsgrad" (grad av tillatt utnyttelse av et område). Identifiser hvilken type utnyttingsgrad som nevnes blant følgende:
+
+- BYA-87, BRA-69, TU, U, F, BGA, BFA, %-BYA-97, T-BRA, %-TU, BYA, BRA, %-BRA
+
+Søk etter uttrykk som tilsvarer kodene, som «prosent bebygd areal» eller «tillatt bruksareal».
+
+Returner resultatet som en Python-dictionary i formatet:
+{"utnyttingsgrad": [type1, type2, ...]}
+
+Hvis ingen utnyttingsgrader finnes, returner en tom liste.
+
+Eksempel på input-tekst og output:
+Tekst: Området har en tillatt BRA på 200 m².
+{"utnyttingsgrad": ["BRA"]}
+
+Tekst: {{ document }}
+ 

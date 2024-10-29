@@ -1,0 +1,33 @@
+[INST] Analyser teksten for å finne referanser til "utnyttingsgrad" — en betegnelse for graden av tillatt utnyttelse av et område, ofte brukt i byggeforskrifter. Din oppgave er å identifisere spesifikke typer utnyttingsgrader som nevnes, ved å se etter følgende koder:
+
+- BYA-87: Tillatt bebygd areal i prosent (etter byggeregelverk fra 1987)
+- BRA-69: Tillatt bruksareal i kvadratmeter (etter byggeregelverk fra 1969 og tidligere)
+- TU: Tillatt tomteutnyttelse i prosent
+- U: Tillatt areal for utnyttelse (etter byggeregelverk fra 1985 og tidligere)
+- F: Flatetutnyttelse i prosent (ofte uttrykt som F-%)
+- BGA: Brutto gulvareal i kvadratmeter
+- BFA: Bebygd flate i kvadratmeter
+- %-BYA-97: Tillatt bebygd areal i prosent (etter byggeregelverk fra 1997)
+- T-BRA: Tillatt bruksareal i kvadratmeter (etter byggeregelverk fra 1997)
+- %-TU: Prosent tomteutnyttelse (etter byggeregelverk fra 1997)
+- BYA: Bebygd areal i kvadratmeter (etter teknisk forskrift)
+- BRA: Bruksareal i kvadratmeter (etter teknisk forskrift)
+- %-BRA: Prosent bruksareal (etter teknisk forskrift)
+
+Returner resultatet som en Python-dictionary, og kun dette, i formatet:
+{"utnyttingsgrad": [type1, type2, ...]}
+
+Hvis ingen utnyttingsgrader finnes i teksten, returner en tom liste:
+{"utnyttingsgrad": []}
+
+Eksempel på input-tekst og output:
+Tekst: For de samlede feltene inkl. fellesarealer gjelder: B3 160%-BRA og B4 170%-BRA.
+{"utnyttingsgrad": ["%-BRA"]}
+
+Tekst: Samlet BYA pr tomt skal ikke overstige 150 kvadratmeter.
+{"utnyttingsgrad": ["BYA"]}
+
+Tekst: frittståande bodar og garasjar inntil 50 kvm BYA kan plasserast som vist på Byggegrense 1 på plankart.
+{"utnyttingsgrad": ["BYA"]}
+
+Tekst: {{ document }}

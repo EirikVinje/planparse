@@ -17,11 +17,8 @@ def train(
         shutil.rmtree(config["output_dir"])
 
     llm = LLMBase(config)
-
     llm.load_model()
-
     llm.init_training()
-
     llm.to_device()
     
     trainerargs = TrainingArguments(
