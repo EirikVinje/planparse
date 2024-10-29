@@ -20,9 +20,15 @@ class LLMBaseTextGen:
         
         if os.path.pardir(self.config["savepath"]) != "models":
 
+            if self.config["access_token"] is not None:
+                access_token = self.config["access_token"]
+            else:
+                access_token = None
+
             self.tokenizer = AutoTokenizer.from_pretrained(
                 self.config["huggingface_model"], 
-                padding_side="left"
+                padding_side="left",
+                token=access_token,
             )
 
             assert not self.config["load_in_4bit"] or not self.config["load_in_8bit"], "Must load model in 4-bit or 8-bit. Not both."
@@ -37,7 +43,8 @@ class LLMBaseTextGen:
             model = AutoModelForCausalLM.from_pretrained(
                 self.config["huggingface_model"],
                 quantization_config=quantization_config,
-                torch_dtype=torch_dtype
+                torch_dtype=torch_dtype,
+                token=access_token,
             )
             
             model = prepare_model_for_kbit_training(model)

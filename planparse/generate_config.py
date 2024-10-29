@@ -5,12 +5,23 @@ import os
 
 def generate_config(
         model : str = "NorwAI/NorwAI-Mistral-7B-instruct",
+        access_token : str = None,
         ):
     """
     Generate a config file for the planparse pipeline.
     """
 
     config = {}
+
+    if access_token is not None:
+
+        with open(access_token, "r") as f:
+            access_token = f.read().strip()
+        config["access_token"] = access_token    
+
+    else:
+        config["access_token"] = None
+
 
     config["model_config"] = {
         "savepath": "./models/{}-{}".format(model.split("/")[-1], datetime.datetime.now().strftime("%Y%m%d%H%M%S")),
