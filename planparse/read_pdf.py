@@ -1,5 +1,6 @@
 import os
 import shutil
+import argparse
 import pdf2image
 import pytesseract
 
@@ -24,7 +25,6 @@ def read_pdf(pdf_path):
         print(f"Error processing image PDF: {e}")
         return ""
 
-
 def read_multiple_pdfs(pdf_paths, save_folder):
     save_folder = save_folder
     for pdf_path in pdf_paths:
@@ -44,8 +44,18 @@ def read_multiple_pdfs(pdf_paths, save_folder):
                     f.write("\n")
 
                 shutil.copyfile(pdf_path, f"{save_folder}/{base_name}/{base_name}.pdf")
-                
-# list all pdf files in /ex_data/
-pdf_files = glob.glob("ex_data/*.pdf")
-print(pdf_files)
-read_multiple_pdfs(pdf_files, "data/")
+    print("\n")
+    print("Finished processing PDFs")
+    print(f"Text files saved in {save_folder}")
+
+if __name__=='__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--pdf_path", type=str, help="Path to PDF file", default="ex_data")
+    parser.add_argument("--save_folder", type=str, help="Folder to save text files", default="data")
+    args = parser.parse_args()
+    pdf_path = args.pdf_path
+    save_folder = args.save_folder
+
+    pdf_files = glob.glob(f"{pdf_path}/*.pdf")
+    print("These are the pdf files that will be parsed: \n", pdf_files)
+    read_multiple_pdfs(pdf_files, save_folder)
