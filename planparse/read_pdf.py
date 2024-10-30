@@ -1,9 +1,12 @@
 import os
+import shutil
 import pdf2image
 import pytesseract
 
 from PyPDF2 import PdfReader
 from pytesseract import Output, TesseractError
+
+import glob
 
 def read_pdf(pdf_path):
     try:
@@ -12,7 +15,7 @@ def read_pdf(pdf_path):
         for image in images:
             ocr_dict = pytesseract.image_to_data(image, lang='nor', output_type=Output.DICT)
             text = " ".join(ocr_dict['text'])
-            full_text += "\n" + text + "\n"
+            full_text += " " + text
         return full_text.strip()
     except TesseractError as e:
         print(f"OCR failed: {e}")
@@ -21,37 +24,28 @@ def read_pdf(pdf_path):
         print(f"Error processing image PDF: {e}")
         return ""
 
-'''
-def read_txt_pdf(pdf_path):
-    try:
-        reader = PdfReader(pdf_path)
-        full_text = ""
-        for page in reader.pages:
-            text = page.extract_text()
-            if text:
-                full_text += text
-        return full_text.strip()
-    except Exception as e:
-        print(f"Error reading text from PDF: {e}")
-        return ""
 
-def read_mixed_pdf(pdf_path):
-    reader = PdfReader(pdf_path)
-    pdf_text = ""
-    
-    for i, page in enumerate(reader.pages):
-        page_text = page.extract_text()
-        
-        if page_text:
-            pdf_text += page_text + "\n"
-        else:
-            try:
-                # Convert this specific page to an image and apply OCR
-                images = pdf2image.convert_from_path(pdf_path, first_page=i+1, last_page=i+1)
-                for image in images:
-                    ocr_text = pytesseract.image_to_string(image, lang='nor')
-                    pdf_text += ocr_text + "\n"
-            except Exception as e:
-                print(f"Error processing page {i + 1}: {e}")
+def read_multiple_pdfs(pdf_paths, save_folder):
+    save_folder = save_folder
+    for pdf_path in pdf_paths:
+        if os.path.isfile(pdf_path):
+            text = read_pdf(pdf_path)
+            if text:
+                base_name = os.path.basename(pdf_path).replace(".pdf", "")
+                new_folder = f"{save_folder}/{base_name}"
+                if not os.path.exists(new_folder):
+                    os.makedirs(new_folder)
+                save_path = os.path.join(new_folder, base_name + ".txt")
+                # delete file if it already exists
+                if os.path.isfile(save_path):
+                    os.remove(save_path)
+                with open(save_path, 'a') as f:
+                    f.write(text)
+                    f.write("\n")
+
+                shutil.copyfile(pdf_path, f"{save_folder}/{base_name}/{base_name}.pdf")
                 
-    return pdf_text.strip()'''
+# list all pdf files in /ex_data/
+pdf_files = glob.glob("ex_data/*.pdf")
+print(pdf_files)
+read_multiple_pdfs(pdf_files, "data/")
