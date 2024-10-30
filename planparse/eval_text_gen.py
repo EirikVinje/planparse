@@ -59,7 +59,7 @@ if __name__ == "__main__":
     llm.load_model()
     logger.info("loaded model : {}".format(config["model_config"]["huggingface_model"]))
     
-    config["template_path"] = "./prompt_templates/mistral_7b_v3.jinja"
+    config["template_path"] = "./prompt_templates/mistral_7b_v4.jinja"
     prompter = Prompter(config["template_path"])
     prompter.load()
     logger.info("loaded promp template from : {}".format(config["template_path"]))    
@@ -75,3 +75,6 @@ if __name__ == "__main__":
         print("IN: {}".format(raw))
         print("OUT: {}".format(output))
     print()
+
+
+

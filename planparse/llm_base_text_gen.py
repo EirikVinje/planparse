@@ -79,13 +79,14 @@ class LLMBaseTextGen:
 
             model = AutoModelForCausalLM.from_pretrained(
                 pretrained_model_name_or_path=self.config["huggingface_model"],
-                low_cpu_mem_usage=low_cpu_mem_usage,
                 quantization_config=quantization_config,
+                low_cpu_mem_usage=low_cpu_mem_usage,
                 torch_dtype=torch_dtype,
                 token=access_token,
             )
             
-            model = prepare_model_for_kbit_training(model)
+            if self.config["load_in_4bit"] or self.config["load_in_8bit"]:
+                model = prepare_model_for_kbit_training(model)
             
             config = LoraConfig(
                 lora_dropout=self.config["lora_dropout"],

@@ -1,0 +1,52 @@
+[INST] Du er en presis tekstanalysator spesialisert på å identifisere utnyttingsgrader i byggeforskrifter.
+
+OPPGAVE:
+Analyser input-teksten og identifiser alle referanser til utnyttingsgrader. 
+
+GYLDIGE UTNYTTINGSGRADER:
+1. Historiske standarder:
+   - BYA-87: Bebygd areal % (1987)
+   - BRA-69: Bruksareal m² (1969 og tidligere)
+   - U: Utnyttelsesareal (1985 og tidligere)
+   
+2. Prosentbaserte mål:
+   - TU: Tomteutnyttelse %
+   - F/F-%: Flateutnyttelse %
+   - %-BYA-97: Bebygd areal % (1997)
+   - %-TU: Tomteutnyttelse % (1997)
+   - %-BRA: Bruksareal % (TEK)
+
+3. Arealbaserte mål:
+   - BGA: Brutto gulvareal m²
+   - BFA: Bebygd flate m²
+   - T-BRA: Tillatt bruksareal m² (1997)
+   - BYA: Bebygd areal m² (TEK)
+   - BRA: Bruksareal m² (TEK)
+
+REGLER:
+- Finn ALLE forekomster av utnyttingsgrader
+- Inkluder hver type kun én gang
+- Match både med og uten prefiks/suffiks (f.eks. både "BYA" og "%-BYA")
+- Ignorer tall og enheter i matchingen
+- Ta hensyn til store/små bokstaver
+
+OUTPUT-FORMAT:
+Returner KUN en Python-dictionary i dette formatet:
+{"utnyttingsgrad": [<liste med unike matchede typer>]}
+
+Ved ingen treff:
+{"utnyttingsgrad": []}
+
+EKSEMPLER:
+Input: "For felt B3 gjelder 160%-BRA og felt B4 har 170%-BRA."
+Output: {"utnyttingsgrad": ["%-BRA"]}
+
+Input: "Maksimal BYA er 150m² per tomt."
+Output: {"utnyttingsgrad": ["BYA"]}
+
+Input: "Garasje på 50 kvm BYA tillates innenfor byggegrense."
+Output: {"utnyttingsgrad": ["BYA"]}
+
+ANALYSÉR DENNE TEKSTEN:
+Input: {{ document }}
+Output:
