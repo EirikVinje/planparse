@@ -14,21 +14,18 @@
 - BRA: Bruksareal i kvadratmeter (etter teknisk forskrift)
 - %-BRA: Prosent bruksareal (etter teknisk forskrift)
 
-Returner resultatet som en Python-dictionary, og kun dette, i formatet:
-{"utnyttingsgrad": [type1, type2, ...]}
+Du skal alltid returnere resultatet som en Python-dictionary i dette formatet, uten forklaring:
+{"utnyttingsgrad": "type"}
 
-Hvis ingen utnyttingsgrader finnes i teksten, returner en tom liste:
-{"utnyttingsgrad": []}
+Hvis ingen utnyttingsgrader finnes i teksten, returner en tom string slik som dette:
+{"utnyttingsgrad": ""}
 
-Eksempel på input-tekst og output:
-Tekst: For de samlede feltene inkl. fellesarealer gjelder: B3 160%-BRA og B4 170%-BRA.[/INST]
-{"utnyttingsgrad": ["%-BRA"]}
-[INST]
-Tekst: Her kan man bygge så mye som man vil.[/INST]
-{"utnyttingsgrad": []}
-[INST]
-Tekst: frittståande bodar og garasjar inntil 50 kvm BYA kan plasserast som vist på Byggegrense 1 på plankart.[/INST]
-{"utnyttingsgrad": ["BYA"]}
-</s>
-[INST]
-Tekst: {{ document }}[/INST]
+Eksempel:
+For de samlede feltene inkl. fellesarealer gjelder: B3 160%-BRA og B4 170%-BRA.[/INST]
+{"utnyttingsgrad": "%-BRA"}[INST]
+Elles kan frittstående bodar og garasjar inntil 50 kvm BYA.[/INST]
+{"utnyttingsgrad": "BYA"}[INST]
+Etter lov kan man bygge slik som man selv vil.[/INST]
+{"utnyttingsgrad": ""}[INST]
+Fortell meg hvilke utnyttingsgrader som fins i denne teksten, uten forklaring:
+{{ document }}[/INST]

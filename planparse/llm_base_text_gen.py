@@ -1,4 +1,5 @@
 from typing import List, Dict, Any
+import logging
 import os
 
 
@@ -7,6 +8,8 @@ from peft import prepare_model_for_kbit_training, LoraConfig, get_peft_model
 from json_repair import repair_json
 from tqdm import tqdm
 import torch
+
+logger = logging.getLogger("planparse")
 
 class LLMBaseTextGen:
 
@@ -116,17 +119,17 @@ class LLMBaseTextGen:
         
         fixed_outputs = []
         
-        max_new_tokens = generation_config["max_new_tokens"]
+        max_new_tokens = 30
 
         for doc in tqdm(prompts, desc="generating outputs", disable=False):
-            
+
             inputs = self.tokenizer(
                 return_tensors="pt", 
                 padding="longest", 
                 truncation=True,
                 text=[doc],
-                )            
-        
+                )
+
             if "cuda" in str(self.model.device):
                 inputs = inputs.to(self.model.device)
             
@@ -147,7 +150,7 @@ class LLMBaseTextGen:
                 sequences=outputs, 
                 )
         
-            decoded_outputs = [self._parse_outputs(decoded_output) for decoded_output in decoded_outputs]
+            # decoded_outputs = [self._parse_outputs(decoded_output) for decoded_output in decoded_outputs]
 
             fixed_outputs.extend(decoded_outputs)
             

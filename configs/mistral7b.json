@@ -23,7 +23,7 @@
         "warmup_steps": 200
     },
     "generation_config": {
-        "max_new_tokens": 30,
+        "max_new_tokens": 20,
         "do_sample": false
     }
 }
