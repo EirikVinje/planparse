@@ -1,0 +1,6 @@
+transformers==4.46.1
+torch==2.5.1
+bitsandbytes==0.44.1
+tqdm==4.66.5
+json_repair==0.30.0
+Jinja2==3.1.4
