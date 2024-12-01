@@ -6,20 +6,26 @@ import os
 from transformers import Trainer, TrainingArguments
 import torch
 from generate_config import generate_config
-from llm_base_text_gen import LLMBase
+from llm_base_text_gen import LLMBaseTextGen
+from load_data import load_data
+from datasets import Dataset, load_dataset
 
 def train(
         config : dict, 
+        model_config: dict,
         traindata, 
         ):
 
     if os.path.isdir(config["output_dir"]):
         shutil.rmtree(config["output_dir"])
 
-    llm = LLMBase(config)
+    llm = LLMBaseTextGen(model_config)
     llm.load_model()
     llm.init_training()
     llm.to_device()
+    
+    traindata = traindata.map(lambda x: llm.tokenizer(x['text']), batched=True)
+    print(traindata)
     
     trainerargs = TrainingArguments(
         per_device_train_batch_size=config["per_device_train_batch_size"],
@@ -66,8 +72,10 @@ if __name__ == "__main__":
     if torch.cuda.is_available():
         print("Device: {}".format(torch.cuda.get_device_name(0)))
         print("Memory Usage: {}/{}".format(round(torch.cuda.memory_allocated(0)/1024**3,1), round(torch.cuda.memory_reserved(0)/1024**3,1)))
-
-    train(config["trainer_config"])
+    cwd = os.getcwd()
+    traindata = load_dataset('json', data_files='data/training_dataset.jsonl' , split='train')
+    
+    train(config["trainer_config"], config["model_config"],traindata)
 
 
 

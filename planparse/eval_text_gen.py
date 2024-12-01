@@ -9,7 +9,7 @@ from llm_base_fill_mask import LLMBaseFillMask
 from llm_base_text_gen import LLMBaseTextGen
 from generate_config import generate_config
 from prompter import Prompter
-# from read_pdf import read_pdf
+#from read_pdf import read_pdf
 
 if os.path.isfile("./setup.sh") is False:
     raise RuntimeError("This script must be run from the root of the repository.")
@@ -34,41 +34,29 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=str, default="./configs/mistral7b.json", help="Path to config file")
-    parser.add_argument("--data", type=str, default=None, help="files to load from path for inference, e.g --data ./data/123124, ./data/1-01")
-    parser.add_argument("--input",type=str, default=None, help="input string, e.g : --input 'Det tillates maksimal % BYA på 50 %'")
+    parser.add_argument("--docs", type=str, default='data/1-01/1-01.txt, data/123506020/123506020.txt', help='Path to data file(s)')
     args = parser.parse_args()
-
-    if args.data is not None:
-
-        data = []
-        
-        files = args.data.split(",")
-        
-        for file in files:
-
-            path_to_file = os.path.join(file, file.split("/")[-1]) + ".txt"
-            with open(path_to_file, 'r') as file:
-                data.append(file.read())
     
-        # data[0] = " ".join(data[0].split()[:200])
+    data = [
+        "Elles kan frittståande bodar og garasjar inntil 50 kvm BYA plasserast som vist på Byggegrense 1 på plankart.",
+        "Her er det ikke lov med mer enn BYA på 200 kvadratmeter.",
+        "Det tillates maksimal BGA - 200 kvadratmeter.",
+        "Her kan man bygge så mye som man vil.",
+        "Lovlig bebygd areal BYA er 160%.",
+        ]
 
-    if args.input is not None:
+    data = []
+    paths = args.docs.split(',')
+    for filepath in paths:
+        filepath = filepath.strip(' ')
+        file = open(filepath,'r')
+        content = file.read()
+        data.append(content)
+        file.close()
+    #print(data)
 
-        data = [args.input]
-    
-    else:
-    
-        data = [
-            "Elles kan frittståande bodar og garasjar inntil 50 kvm BYA plasserast som vist på Byggegrense 1 på plankart.",
-            "Her er det ikke lov med mer enn BYA på 200 kvadratmeter.",
-            "Det tillates maksimal BGA - 200 kvadratmeter.",
-            "Her kan man bygge så mye som man vil.",
-            "Lovlig bebygd areal BYA er 160%.",
-            ]
+    data = ["Det tillates maksimal % BYA på 50 %. Side 2 av 8 Det kreves et minste uteoppholdsareal MUA pr. boligenhet på 50 m2. Bebyggelsen skal ha saltak med vinkel mellom 18 og 38 grader. Det tillates påbygg i form av ark/oppløft, der påbyggets bredde kan være maksimalt  1/3-del av takets lengde. B2: I byggeområde B 2 tillates oppført tofamilie-/trefamilie-/firefamiliehus i maksimalt to  etasjer, med mønehøyde maksimalt 10,0 m over planert terreng og med mulighet for  beboelse på innredet loft, og med tilhørende anlegg som garasjer og separate boder.  Garasjer og boder skal tilpasses bolighusets form, takvinkel og materialbruk, de skal  kun ha en etasje og maksimal mønehøyde på 5,5 m og kan oppføres utenfor  byggegrense med avstand minst 2,0 m til nabogrense mot kommunal vei dersom  utkjøring fra garasje skjer parallelt med vei. Skjer utkjøring direkte mot kommunal vei  skal avstanden til nabogrense mot vei være minst 5,0 m. Byggegrense mot gang-/sykkelvei langs FV 304 er 15 m fra midtlinje av gang-  sykkelvei. Det tillates maksimal % BYA på 50 %. Byggeområde for industri 11 I byggeområde I 1 ligger Kvelde mølle med tilhørende lagerbebyggelse og tekniske  installasjoner. Maksimalt tillatt % BYA er på 50 %."]
 
-    logger.info("Loaded {} instances for inference".format(len(data)))
-
-    logger.info("Instances word count : {}".format([len(d.split(" ")) for d in data]))
     
     if args.config is not None:
         with open(args.config, "r") as f:
@@ -77,12 +65,16 @@ if __name__ == "__main__":
         config = generate_config()
     logger.info("loaded config from : {}".format(args.config))
     
+    print()
+    pprint(config, sort_dicts=False)
+    print()
     
     llm = LLMBaseTextGen(config["model_config"])
     llm.load_model()
     logger.info("loaded model : {}".format(config["model_config"]["huggingface_model"]))
     
-    config["template_path"] = "./prompt_templates/mistral_7b_v5.jinja"
+    config["template_path"] = "./prompt_templates/mistral_7b_test.jinja"
+    config["generation_config"]["max_new_tokens"] = 100
     prompter = Prompter(config["template_path"])
     prompter.load()
     logger.info("loaded promp template from : {}".format(config["template_path"]))    
@@ -96,7 +88,6 @@ if __name__ == "__main__":
     for output, raw in zip(outputs, data):
         print()
         print("IN: {}".format(raw))
-        print()
         print("OUT: {}".format(output))
     print()
 

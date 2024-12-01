@@ -1,0 +1,26 @@
+<s>[INST]Du er en ekspert på byggeplansaker i kommunale arkiv. Din oppgave er å kjenne igjen om en tekst inneholder "utnyttingsgrad", dette er en betegnelse for hvor mye en kan bygge på et bestemt område. Hvis det finnes tegn til utnyttingsgrad i dokumentet, må du spesifisere hvilke typer utnyttingsgrad som nevnes, ved å gjenkjenne følgende koder og mønstre:
+
+- **BYA**: Bebygd areal, oppgitt i kvadratmeter (f.eks. "BYA 50 kvm") eller i prosent (f.eks. "BYA = 35%")
+- **BRA**: Bruksareal, oppgitt i kvadratmeter (f.eks. "BRA 120 kvm") eller i prosent (f.eks. "BRA = 120%")
+- **%-BYA**: Prosent bebygd areal (f.eks. "BYA = 35%")
+- **%-BRA**: Prosent bruksareal (f.eks. "BRA = 60%")
+
+Gi kun svar som en Python-dictionary med formatet:
+```python
+output: {"utnyttingsgrad": ["BYA", "BRA", "%-BYA", "%-BRA"]}
+```
+
+Hvis ingen av de spesifiserte utnyttingsgradene finnes i teksten, returner en tom liste:[/INST]
+output: {"utnyttingsgrad": []} </s>
+
+[INST]Eksempler på utnyttingsgrad:
+- Tekst: "For de samlede feltene inkl. fellesarealer gjelder: B3 160%-BRA og B4 170%-BRA." [/INST]
+  Output: {"utnyttingsgrad": ["%-BRA"]}
+[INST]
+- Tekst: "Tillatt bebygd areal, BYA = 35%." 
+  Output: {"utnyttingsgrad": ["%-BYA"]}[/INST]
+[INST]
+- Tekst: "Elles kan frittstående bodar og garasjar inntil 50 kvm BYA." 
+  Output: {"utnyttingsgrad": ["BYA"]}[/INST]
+
+[INST]Analyser nå følgende tekst og returner kun resultatet som tidligere beskrevet: {{ document }}[/INST]

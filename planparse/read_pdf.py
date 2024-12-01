@@ -41,7 +41,6 @@ def read_multiple_pdfs(pdf_paths, save_folder):
                     os.remove(save_path)
                 with open(save_path, 'a') as f:
                     f.write(text)
-                    f.write("\n")
 
                 shutil.copyfile(pdf_path, f"{save_folder}/{base_name}/{base_name}.pdf")
     print("\n")

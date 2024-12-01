@@ -1,0 +1,33 @@
+<s>[INST] Analyser teksten for å finne referanser til "utnyttingsgrad" — en betegnelse for graden av tillatt utnyttelse av et område, ofte brukt i byggeforskrifter. Din oppgave er å identifisere spesifikke typer utnyttingsgrader som nevnes, ved å se etter følgende koder:
+
+- BYA: Bebygd areal i kvadratmeter
+- BRA: Bruksareal i kvadratmeter
+- %-BRA: Prosent bruksareal
+- %-BYA: Prosent bebygd areal
+
+Returner resultatet utne forklaring som en Python-dictionary, og kun dette, i formatet:
+output: {"utnyttingsgrad": ["type1","type2"...]}
+
+Hvis ingen utnyttingsgrader finnes i teksten, returner en tom liste slik som dette uten forklaring:
+output: {"utnyttingsgrad": []}
+
+Her er noen eksempler på hvordan utnyttingsgrad forklares i en tekst:
+
+For de samlede feltene inkl. fellesarealer gjelder: B3 160%-BRA og B4 170%-BRA.[/INST]
+{"utnyttingsgrad": ["%-BRA"]}
+
+[INST]
+Tillatt bebygd areal, BYA = 35%.[/INST]
+{"utnyttingsgrad": ["%-BYA"]}
+
+[INST]
+Elles kan frittstående bodar og garasjar inntil 50 kvm BYA.[/INST]
+{"utnyttingsgrad": ["BYA"]}
+
+[INST]
+Etter lov kan man bygge slik som man selv vil.[/INST]
+{"utnyttingsgrad": []}
+</s>
+
+[INST] Gi meg hvilke utnyttingsgrader som finnes i denne teksten uten Forklaring:
+{{ document }}[/INST]
