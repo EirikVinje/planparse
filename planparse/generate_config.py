@@ -5,6 +5,7 @@ import os
 
 
 def generate_config(
+        config_name : str,
         template_path : str = "./prompt_templates/mistral_7b_v1.jinja",
         model : str = "NorwAI/NorwAI-Mistral-7B-instruct",
         access_token : str = "./access_token/token.txt",
@@ -15,10 +16,11 @@ def generate_config(
 
     config = {}    
 
+    config["config_name"] = config_name
     config["template_path"] = template_path
+    config["train_path"] = "./data/training_dataset.jsonl"
 
     config["model_config"] = {
-        "savepath": "./models/{}-{}".format(model.split("/")[-1], datetime.datetime.now().strftime("%Y%m%d%H%M%S")),
         "access_token": access_token,
         "huggingface_model": model,
         "torch_dtype": "float16",
@@ -29,16 +31,25 @@ def generate_config(
         "device": "cuda",
         "r": 8,
         }
-
+    
     config["trainer_config"] = {
-        "per_device_train_batch_size": 1,
-        "gradient_accumulation_steps": 1,
-        "logging_steps": 100000,
-        "output_dir": "./temp",
-        "num_train_epochs": 3,
-        "learning_rate": 1e-4,
-        "weight_decay": 0.01,
-        "warmup_steps": 200,
+        "save_dir": "./local_models/",
+        "run_name" : "run_{}".format(config["config_name"]),
+        "per_device_train_batch_size" : 1,
+        "gradient_accumulation_steps" : 1,
+        "torch_empty_cache_steps" : True,
+        "lr_scheduler_type" : "linear",
+        "logging_steps" : 100000,
+        "output_dir" :  "./temp",
+        "optim" : "adamw_torch",
+        "num_train_epochs" : 1,
+        "learning_rate" : 1e-4,
+        "warmup_steps" : 200,
+        "weight_decay" : 0.01,
+        "max_steps" :   -1,
+        "report_to" : "none",
+        "data_seed" : 42,
+        "seed" : 42,
     }
 
     config["generation_config"] = {
@@ -58,14 +69,16 @@ if __name__ == "__main__":
     parser.add_argument("--name", type=str, help="name of the config file")
     args = parser.parse_args()
 
-    config = generate_config()
+    configname = args.name
+
+    config = generate_config(config_name=configname)
 
     savedir = "./configs"
 
     if not os.path.isdir(savedir):
         os.mkdir(savedir)
 
-    savepath = os.path.join(savedir, args.name)
+    savepath = os.path.join(savedir, configname)
 
     with open(f"{savepath}.json", "w") as f:
         json.dump(config, f, indent=4)

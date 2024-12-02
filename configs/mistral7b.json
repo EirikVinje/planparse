@@ -1,29 +1,39 @@
 {
+    "config_name": "mistral7b",
     "template_path": "./prompt_templates/mistral_7b_v1.jinja",
+    "train_path": "./data/training_dataset.jsonl",
     "model_config": {
-        "savepath": "./models/NorwAI-Mistral-7B-instruct-20241029235037",
         "access_token": "./access_token/token.txt",
         "huggingface_model": "NorwAI/NorwAI-Mistral-7B-instruct",
         "torch_dtype": "float16",
-        "load_in_4bit": false,
-        "load_in_8bit": true,
+        "load_in_4bit": true,
+        "load_in_8bit": false,
         "lora_dropout": 0.1,
         "lora_alpha": 16,
         "device": "cuda",
         "r": 8
     },
     "trainer_config": {
+        "save_dir": "./local_models/",
+        "run_name": "run_mistral7b",
         "per_device_train_batch_size": 1,
         "gradient_accumulation_steps": 1,
+        "torch_empty_cache_steps": true,
+        "lr_scheduler_type": "linear",
         "logging_steps": 100000,
         "output_dir": "./temp",
-        "num_train_epochs": 3,
+        "optim": "adamw_torch",
+        "num_train_epochs": 1,
         "learning_rate": 0.0001,
+        "warmup_steps": 200,
         "weight_decay": 0.01,
-        "warmup_steps": 200
+        "max_steps": -1,
+        "report_to": "none",
+        "data_seed": 42,
+        "seed": 42
     },
     "generation_config": {
-        "max_new_tokens": 20,
+        "max_new_tokens": 30,
         "do_sample": false
     }
 }
