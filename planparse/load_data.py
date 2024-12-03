@@ -1,8 +1,11 @@
 import os
+import re
 import json
 import glob
 import pandas as pd
+from prompter import Prompter
 
+'''
 def create_text_row(instruction, input, output):
     text_row = f"<s>[INST] {instruction} {input} [/INST] \\n {output} </s>"
     return text_row
@@ -42,3 +45,61 @@ def load_data(data_folder):
     #print(dataset)
     process_jsonl_file(f'{data_folder}/training_dataset.jsonl', dataset)
     print("DONE")
+'''
+
+def preprocess_text(raw_text):
+    # Step 1: Remove Noise
+    text = re.sub(r"[^\w\s.,\-:%\(\)\[\]=/]", "", raw_text)  # Remove unwanted characters
+    text = re.sub(r"\s+", " ", text)  # Normalize whitespace
+    
+    # Step 2: Replace Unusual Symbols
+    text = text.replace("m*", "m²") 
+    text = text.replace("m?", "m²") 
+    text = re.sub(r"=\s*", "", text)  # Remove standalone equal signs and surrounding spaces
+    
+    #text = text.lower()
+    
+    return text.strip()
+
+def load_data_prompter(data_folder):
+    datafiles = glob.glob(f'{data_folder}/**/*.txt', recursive=True)
+    y_files = glob.glob(f'{data_folder}/**/*.json', recursive=True)
+    #print(datafiles)
+    inputs = []
+    outputs = []
+    for filepath in datafiles:
+        with open(filepath, 'r') as file:
+            inp = file.read()
+            preprocessed_inp = preprocess_text(inp)
+            inputs.append(preprocessed_inp)
+    
+    
+    for file in y_files:
+        with open(file, 'r') as f:
+            outputs.append(json.load(f))
+    
+    template_path = "./prompt_templates/mistral_7b_train_v5.jinja"
+
+    prompter = Prompter(
+        template_path = template_path,   
+    )
+    
+    prompter.load()
+    texts = []
+    output_file_path = f'{data_folder}/training_dataset.jsonl'
+    if os.path.exists(output_file_path):
+        os.remove(output_file_path)
+    with open(output_file_path, "w") as output_jsonl_file:
+        for input,output in zip(inputs, outputs):
+            text = prompter(input, output)
+            #print(text)
+            textt = {"text": text}
+            output_jsonl_file.write(json.dumps(textt) + "\n")
+            texts.append(text)
+    
+    dataset = pd.DataFrame({'text': texts})
+    #print(dataset)
+    #process_jsonl_file(f'{data_folder}/training_dataset.jsonl', dataset)
+    return dataset
+
+#load_data_prompter('./data')

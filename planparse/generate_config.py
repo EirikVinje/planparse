@@ -18,7 +18,7 @@ def generate_config(
 
     config["config_name"] = config_name
     config["template_path"] = template_path
-    config["train_path"] = "./data/training_dataset.jsonl"
+    config["train_path"] = "./data"
 
     config["model_config"] = {
         "access_token": access_token,

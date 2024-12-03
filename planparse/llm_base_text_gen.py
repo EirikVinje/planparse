@@ -23,6 +23,7 @@ class LLMBaseTextGen:
         
 
         self.model_config = config["model_config"]
+        self.generation_config = config["generation_config"]
 
         if self.model_config["access_token"] is not None:
             with open(self.model_config["access_token"], "r") as f:
@@ -109,7 +110,7 @@ class LLMBaseTextGen:
         
         fixed_outputs = []
         
-        max_new_tokens = 30
+        max_new_tokens = self.generation_config["max_new_tokens"]
 
         for doc in tqdm(prompts, desc="generating outputs", disable=False):
 
@@ -119,6 +120,7 @@ class LLMBaseTextGen:
                 truncation=True,
                 text=[doc],
                 )
+            print(inputs["input_ids"].size(1)+max_new_tokens)
 
             if "cuda" in str(self.model.device):
                 inputs = inputs.to(self.model.device)
@@ -130,7 +132,7 @@ class LLMBaseTextGen:
                     max_length=inputs["input_ids"].size(1) + max_new_tokens,
                     pad_token_id=self.tokenizer.pad_token_id,
                     eos_token_id=self.tokenizer.eos_token_id,
-                    do_sample=False,
+                    do_sample=self.generation_config["do_sample"],
                     )
 
                 outputs = outputs[:, inputs["input_ids"].size(1):]

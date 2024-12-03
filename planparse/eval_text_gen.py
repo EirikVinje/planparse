@@ -9,7 +9,7 @@ from llm_base_fill_mask import LLMBaseFillMask
 from llm_base_text_gen import LLMBaseTextGen
 from generate_config import generate_config
 from prompter import Prompter
-#from read_pdf import read_pdf
+from load_data import preprocess_text
 
 if os.path.isfile("./setup.sh") is False:
     raise RuntimeError("This script must be run from the root of the repository.")
@@ -34,16 +34,17 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=str, default="./configs/mistral7b.json", help="Path to config file")
-    parser.add_argument("--docs", type=str, default='data/1-01/1-01.txt, data/123506020/123506020.txt', help='Path to data file(s)')
+    parser.add_argument("--docs", type=str, default='data/1719/1719.txt', help='Path to data file(s)')
+    parser.add_argument("--local_path", type=str, default='local_models/NorwAI/NorwAI-Mistral-7B-instruct-20241203104742')
     args = parser.parse_args()
     
-    data = [
+    '''data = [
         "Elles kan frittståande bodar og garasjar inntil 50 kvm BYA plasserast som vist på Byggegrense 1 på plankart.",
         "Her er det ikke lov med mer enn BYA på 200 kvadratmeter.",
         "Det tillates maksimal BGA - 200 kvadratmeter.",
         "Her kan man bygge så mye som man vil.",
         "Lovlig bebygd areal BYA er 160%.",
-        ]
+        ]'''
 
     data = []
     paths = args.docs.split(',')
@@ -51,6 +52,7 @@ if __name__ == "__main__":
         filepath = filepath.strip(' ')
         file = open(filepath,'r')
         content = file.read()
+        content = preprocess_text(content)
         data.append(content)
         file.close()
     #print(data)
@@ -69,17 +71,18 @@ if __name__ == "__main__":
     pprint(config, sort_dicts=False)
     print()
     
-    llm = LLMBaseTextGen(config["model_config"])
+    llm = LLMBaseTextGen(config, args.local_path)
     llm.load_model()
     logger.info("loaded model : {}".format(config["model_config"]["huggingface_model"]))
     
-    config["template_path"] = "./prompt_templates/mistral_7b_test.jinja"
-    config["generation_config"]["max_new_tokens"] = 100
+    config["template_path"] = "./prompt_templates/mistral_7b_test_v5.jinja"
+    config["generation_config"]["max_new_tokens"] = 300
     prompter = Prompter(config["template_path"])
     prompter.load()
     logger.info("loaded promp template from : {}".format(config["template_path"]))    
 
-    documents = [prompter(doc) for doc in data]
+    documents = [prompter(doc, None) for doc in data]
+    print(documents[0])
     logger.info("prompts generated...")
 
     logger.info("starting generation...")
