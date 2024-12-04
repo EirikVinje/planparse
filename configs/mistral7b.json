@@ -1,7 +1,7 @@
 {
     "config_name": "mistral7b",
     "template_path": "./prompt_templates/mistral_7b_v1.jinja",
-    "train_path": "./data/training_dataset.jsonl",
+    "train_path": "./data",
     "model_config": {
         "access_token": "./access_token/token.txt",
         "huggingface_model": "NorwAI/NorwAI-Mistral-7B-instruct",
@@ -34,6 +34,6 @@
     },
     "generation_config": {
         "max_new_tokens": 30,
-        "do_sample": false
+        "do_sample": False
     }
 }

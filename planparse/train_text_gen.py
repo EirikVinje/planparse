@@ -10,7 +10,7 @@ import torch
 from generate_config import generate_config
 
 from llm_base_text_gen import LLMBaseTextGen
-from load_data import load_data
+from load_data import load_data_prompter
 
 
 def train(
@@ -87,8 +87,8 @@ def load_data(file_path):
 
 
 def format_tokenize(data, tokenizer):
-
-    data = [sample["text"] for sample in data]
+    
+    data = [sample for sample in data["text"]]
 
     tokenized_data = tokenizer(data, truncation=True)
     
@@ -114,11 +114,10 @@ if __name__ == "__main__":
     if torch.cuda.is_available():
         print("Device: {}".format(torch.cuda.get_device_name(0)))
         print("Memory Usage: {}/{}".format(round(torch.cuda.memory_allocated(0)/1024**3,1), round(torch.cuda.memory_reserved(0)/1024**3,1)))
-    cwd = os.getcwd()
     
-    data = load_data(config["train_path"])
+    data = load_data_prompter(config["train_path"])
     
-    llm = LLMBaseTextGen(config["model_config"])
+    llm = LLMBaseTextGen(config)
     llm.load_model()
     llm.init_training()
     llm.to_device()

@@ -21,13 +21,13 @@ class Prompter:
 
         self.template = Template(self.raw_template_text)
 
-    def _generate_prompt(self, context):
+    def _generate_prompt(self, context, output):
 
         context = copy.deepcopy(context)        
         
         rendered_context = {
             "document" : context, 
-            "bajas" : 123,
+            "output_text" : output,
             }
 
         rendered_template = self.template.render(rendered_context)
@@ -36,13 +36,13 @@ class Prompter:
 
         return rendered_template
     
-    def __call__(self, context):
-        return self._generate_prompt(context)
+    def __call__(self, context, output):
+        return self._generate_prompt(context, output)
         
 
 if __name__ == "__main__":
 
-    template_path = "./prompt_templates/mistral_7b_v1.jinja"
+    template_path = "./prompt_templates/mistral_7b_train_vt.jinja"
 
     prompter = Prompter(
         template_path = template_path,   
@@ -51,7 +51,8 @@ if __name__ == "__main__":
     prompter.load()
 
     input_text = "Dette er et dokument med utnyttingsgrader! æøå"
+    output = '{"utnyttingsgrad": ["BYA"]}'
 
-    output = prompter(input_text)
+    output = prompter(input_text, output)
 
     print(output)    
