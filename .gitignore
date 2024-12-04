@@ -2,8 +2,8 @@
 # local storage
 local_models/
 access_token/
-
-
+local_models_storage/
+temp/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

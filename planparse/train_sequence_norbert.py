@@ -10,44 +10,52 @@ import os
 from transformers import AutoModelForMaskedLM, AutoTokenizer, AutoModelForSequenceClassification
 from transformers import Trainer, TrainingArguments
 from torch.utils.data import DataLoader, Dataset
+from torch.nn.utils.rnn import pad_sequence
 from torch import nn
 import torch
 
 
-from generate_fill_mask_config import generate_config
+def custom_data_collator(batch_input):
+    
+    device = "cuda"
 
+    input_ids = [torch.tensor(inst["input_ids"], dtype=torch.long) for inst in batch_input]
+    attention_mask = [torch.tensor(inst["attention_mask"], dtype=torch.long) for inst in batch_input]
+    input_ids = pad_sequence(input_ids, batch_first=True, padding_value=1)
+    attention_mask = pad_sequence(attention_mask, batch_first=True, padding_value=0)
 
+    labels = torch.tensor([inst["labels"] for inst in batch_input], dtype=torch.long) if "labels" in batch_input[0] else None
+
+    new_batch_input = {
+        "input_ids": input_ids.to(device),
+        "attention_mask": attention_mask.to(device),
+    }
+    if labels is not None:
+        new_batch_input["labels"] = labels.to(device)
+
+    return new_batch_input
 
 
 class CustomDataset(Dataset):
-    def __init__(self, encodings):
-        self.encodings = encodings
+    def __init__(self, encodings, labels):
 
+        self.encodings = []
+
+        for i in range(len(encodings["input_ids"])):
+
+            self.encodings.append(
+                {
+                    "input_ids" : encodings["input_ids"][i],
+                    "attention_mask" : encodings["attention_mask"][i],
+                    "labels" : labels[i],
+                }
+            )
+        
     def __len__(self):
-        return len(self.encodings['input_ids'])
+        return len(self.encodings)
 
     def __getitem__(self, idx):
-        return {key: val[idx] for key, val in self.encodings.items()}
-
-
-
-class SequenceClassifier:
-    def __init__(
-            self,
-            modelname, 
-            num_classes,
-            label2id,
-            id2label,
-            ):
-
-        self.model = AutoModelForSequenceClassification.from_pretrained(
-            modelname, 
-            num_labels=2, 
-            id2label=id2label, 
-            label2id=label2id
-        )
-    
-        self.tokenizer = AutoTokenizer.from_pretrained(modelname)
+        return self.encodings[idx]
 
 
 def load_data(
@@ -58,60 +66,56 @@ def load_data(
         return [json.loads(line) for line in f]
     
 
-
-
 def train(
-        llm : any, 
-        config : dict, 
-        traindata : list[dict], 
+        model : AutoModelForSequenceClassification,
+        tokenizer : AutoTokenizer,
+        traindata : CustomDataset, 
         ):
 
-    trainer_config = config["trainer_config"]
-
-    if os.path.isdir(trainer_config["output_dir"]):
-        shutil.rmtree(trainer_config["output_dir"])
+    savedir = "./local_models_storage/"
+    
+    if os.path.isdir("./temp"):
+        shutil.rmtree("./temp")
     
     trainerargs = TrainingArguments(
-        per_device_train_batch_size=trainer_config["per_device_train_batch_size"],
-        gradient_accumulation_steps=trainer_config["gradient_accumulation_steps"],
-        torch_empty_cache_steps=trainer_config["torch_empty_cache_steps"],
-        lr_scheduler_type=trainer_config["lr_scheduler_type"],
-        num_train_epochs=trainer_config["num_train_epochs"],
-        run_name="run_{}".format(config["config_name"]),
-        learning_rate=trainer_config["learning_rate"],
-        logging_steps=trainer_config["logging_steps"],
-        warmup_steps=trainer_config["warmup_steps"],
-        weight_decay=trainer_config["weight_decay"],
-        output_dir=trainer_config["output_dir"],
-        max_steps=trainer_config["max_steps"],
-        data_seed=trainer_config["seed"],
-        optim=trainer_config["optim"],
-        seed=trainer_config["seed"],
+        per_device_train_batch_size=4,
+        gradient_accumulation_steps=2,
+        torch_empty_cache_steps=True,
+        lr_scheduler_type="linear",
+        num_train_epochs=10,
+        run_name="run_norbert",
+        learning_rate=0.001,
+        logging_steps=10000,
+        warmup_steps=100,
+        weight_decay=0.01,
+        output_dir="./temp",
+        max_steps=-1,
+        data_seed=42,
+        optim="adamw_torch",
+        seed=42,
         report_to="none",
     )
 
+    training_args = trainerargs.set_dataloader(pin_memory=False)
+
     trainer = Trainer(
-        tokenizer=llm.tokenizer,
+        data_collator=custom_data_collator,
         train_dataset=traindata,
         args=trainerargs,
-        model=llm.model,
+        model=model,
     )
 
     trainer.train()
     
-    if os.path.isdir(trainer_config["output_dir"]):
-        shutil.rmtree(trainer_config["output_dir"])
+    if os.path.isdir("./temp"):
+        shutil.rmtree("./temp")
 
-    save_path = os.path.join(trainer_config["save_dir"], "{}-{}".format(config["model_config"]["huggingface_model"], datetime.datetime.now().strftime("%Y%m%d%H%M%S")))
+    save_path = os.path.join(savedir, "norbert-seqcls-{}".format(datetime.datetime.now().strftime("%Y%m%d%H%M%S")))
 
-    llm.save(save_path)
+    model.save_pretrained(save_path)
+    tokenizer.save_pretrained(save_path)
 
-    with open(os.path.join(save_path, "custom_config.json"), "w") as f:
-        json.dump(config, f, indent=4)
-    
-    print(f"Model and config saved to : {save_path}")    
-
-
+    print(f"Model and tokenizer saved to : {save_path}")    
 
 
 if __name__ == "__main__":
@@ -124,32 +128,34 @@ if __name__ == "__main__":
         print("Memory Usage: {}/{}".format(round(torch.cuda.memory_allocated(0)/1024**3,1), round(torch.cuda.memory_reserved(0)/1024**3,1)))
 
     classes=[
-        "BYA-87", #1
-        "BRA-69", #2
-        "TU", #3
-        "U", #4
-        "F", #5
-        "BGA", #6
-        "BFA", #7
-        "%-BYA-97", #8 
-        "T-BRA", #9
-        "%-TU", #10
+        "BYA-87", #0
+        "BRA-69", #1
+        "TU", #2
+        "U", #3
+        "F", #4
+        "BGA", #5
+        "BFA", #6
+        "%-BYA-97", #7 
+        "T-BRA", #8
+        "%-TU", #9
         "%-BYA", #10
         "BYA", #11
-        "BRA", #13
-        "%-BRA", #14
+        "BRA", #12
+        "%-BRA", #13
     ]
 
-    include_idx = [10, 11, 12, 13]
+    include_idx = [2, 10, 11, 12, 13]
     include_classes = [classes[i] for i in include_idx]
 
-    id2label = {i: c for i, c in enumerate(include_classes)}
-    label2id = {c: i for i, c in enumerate(include_classes)}
+    id2label = {i+1: c for i, c in enumerate(include_classes)}
+    label2id = {c: i+1 for i, c in enumerate(include_classes)}
 
+    id2label[0] = "none"
+    label2id["none"] = 0
     
     model = AutoModelForSequenceClassification.from_pretrained(
             "ltg/norbert3-large", 
-            num_labels=len(include_classes), 
+            num_labels=len(label2id.keys()), 
             id2label=id2label, 
             label2id=label2id,
             trust_remote_code=True,
@@ -159,16 +165,36 @@ if __name__ == "__main__":
 
     data = load_data()
 
-    print(data)
+    documents = [inst["text"] for inst in data]
+    labels = [inst["label"] for inst in data]
 
-    # texts = ["Example text 1", "Example text 2", "Example text 3"]
-    # labels = [0, 1, 2]  # Example labels
+    fixed_labels = []
+    for label in labels:
+        if label == []:
+            fixed_labels.append("none")
+
+        elif isinstance(label, list):
+            fixed_labels.append(label[0])
+
+        elif isinstance(label, str):
+            fixed_labels.append(label)
+
+
+    labels = [label2id[label] for label in fixed_labels]
     
-    # encodings = preprocess(texts, labels, tokenizer)
-    # dataset = CustomDataset(encodings)
+    tokenized_docs = tokenizer(documents, truncation=True, padding=False, max_length=512)
     
-    # # DataLoader
-    # train_loader = DataLoader(dataset, batch_size=16, shuffle=True)
-    
-    # train(model, train_loader)
+    train_dataset = CustomDataset(tokenized_docs, labels)
+
+    train(model, tokenizer, train_dataset)
+
+
+
+
+
+
+
+
+
+
 
