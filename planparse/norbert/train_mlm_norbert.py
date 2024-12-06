@@ -8,7 +8,7 @@ import datetime
 import json
 import os
 
-from transformers import AutoModelForMaskedLM, AutoTokenizer, AutoModelForSequenceClassification
+from transformers import AutoModelForMaskedLM, AutoTokenizer
 from sklearn.model_selection import train_test_split
 from transformers import Trainer, TrainingArguments
 from torch.utils.data import DataLoader, Dataset
@@ -60,8 +60,9 @@ class TrainDataset(Dataset):
         return self.encodings[idx]
     
 
+
 def train(
-        model : AutoModelForSequenceClassification,
+        model : AutoModelForMaskedLM,
         tokenizer : AutoTokenizer,
         traindata : TrainDataset, 
         ):
@@ -108,7 +109,7 @@ def train(
     if os.path.isdir("./temp"):
         shutil.rmtree("./temp")
 
-    save_path = os.path.join(savedir, "norbert-seqcls-{}".format(datetime.datetime.now().strftime("%Y%m%d%H%M%S")))
+    save_path = os.path.join(savedir, "norbert-domain-{}".format(datetime.datetime.now().strftime("%Y%m%d%H%M%S")))
 
     model.save_pretrained(save_path)
     tokenizer.save_pretrained(save_path)
@@ -125,37 +126,9 @@ if __name__ == "__main__":
         print("Device: {}".format(torch.cuda.get_device_name(0)))
         print("Memory Usage: {}/{}".format(round(torch.cuda.memory_allocated(0)/1024**3,1), round(torch.cuda.memory_reserved(0)/1024**3,1)))
 
-    classes=[
-        "BYA-87", #0
-        "BRA-69", #1
-        "TU", #2
-        "U", #3
-        "F", #4
-        "BGA", #5
-        "BFA", #6
-        "%-BYA-97", #7 
-        "T-BRA", #8
-        "%-TU", #9
-        "%-BYA", #10
-        "BYA", #11
-        "BRA", #12
-        "%-BRA", #13
-    ]
-
-    include_idx = [10, 11, 12, 13]
-    include_classes = [classes[i] for i in include_idx]
-
-    id2label = {i+1: c for i, c in enumerate(include_classes)}
-    label2id = {c: i+1 for i, c in enumerate(include_classes)}
-
-    id2label[0] = "none"
-    label2id["none"] = 0
     
-    model = AutoModelForSequenceClassification.from_pretrained(
+    model = AutoModelForMaskedLM.from_pretrained(
             "ltg/norbert3-large", 
-            num_labels=len(label2id.keys()), 
-            id2label=id2label, 
-            label2id=label2id,
             trust_remote_code=True,
         )
     
@@ -165,25 +138,12 @@ if __name__ == "__main__":
     
     with open(train_path, "r") as f:
         train_raw = [json.loads(line) for line in f]
-
-    documents = [inst["text"] for inst in train_raw]
-    labels = [inst["label"] for inst in train_raw]
-
-    fixed_labels = []
-    for label in labels:
-        if label == []:
-            fixed_labels.append("none")
-
-        elif isinstance(label, list):
-            fixed_labels.append(label[0])
-
-    labels = [label2id[label] for label in fixed_labels]
     
-    tokenized_docs = tokenizer(documents, truncation=True, padding=False, max_length=512)
+    # tokenized_docs = tokenizer(documents, truncation=True, padding=False, max_length=512)
 
-    train_dataset = TrainDataset(tokenized_docs, labels)
+    # train_dataset = TrainDataset(tokenized_docs, labels)
 
-    train(model, tokenizer, train_dataset)
+    # train(model, tokenizer, train_dataset)
 
 
 

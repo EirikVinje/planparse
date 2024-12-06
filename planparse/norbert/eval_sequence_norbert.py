@@ -101,7 +101,7 @@ if __name__ == "__main__":
 
     label2id = model.config.label2id
     
-    test_path = "./formated_data/test_generated_dataset.jsonl"
+    test_path = "./formated_data/huge/augmented_generated_with_edge_cases.jsonl"
     
     with open(test_path, "r") as f:
         test_raw = [json.loads(line) for line in f]
