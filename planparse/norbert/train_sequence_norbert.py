@@ -1,6 +1,7 @@
 """
 Implement a class for filling masks. E.g to ltg/norbert3-large (https://huggingface.co/ltg/norbert3-large)
 """
+
 import argparse 
 import shutil
 import datetime
@@ -8,6 +9,7 @@ import json
 import os
 
 from transformers import AutoModelForMaskedLM, AutoTokenizer, AutoModelForSequenceClassification
+from sklearn.model_selection import train_test_split
 from transformers import Trainer, TrainingArguments
 from torch.utils.data import DataLoader, Dataset
 from torch.nn.utils.rnn import pad_sequence
@@ -36,7 +38,7 @@ def custom_data_collator(batch_input):
     return new_batch_input
 
 
-class CustomDataset(Dataset):
+class TrainDataset(Dataset):
     def __init__(self, encodings, labels):
 
         self.encodings = []
@@ -56,20 +58,12 @@ class CustomDataset(Dataset):
 
     def __getitem__(self, idx):
         return self.encodings[idx]
-
-
-def load_data(
-        file_path : str = "./formated_data/norbert_sequence_labeled_chunks.jsonl",        
-        ):
-    
-    with open(file_path, "r") as f:
-        return [json.loads(line) for line in f]
     
 
 def train(
         model : AutoModelForSequenceClassification,
         tokenizer : AutoTokenizer,
-        traindata : CustomDataset, 
+        traindata : TrainDataset, 
         ):
 
     savedir = "./local_models_storage/"
@@ -78,7 +72,7 @@ def train(
         shutil.rmtree("./temp")
     
     trainerargs = TrainingArguments(
-        per_device_train_batch_size=4,
+        per_device_train_batch_size=8,
         gradient_accumulation_steps=2,
         torch_empty_cache_steps=True,
         lr_scheduler_type="linear",
@@ -98,6 +92,8 @@ def train(
 
     training_args = trainerargs.set_dataloader(pin_memory=False)
 
+    model.train()
+    
     trainer = Trainer(
         data_collator=custom_data_collator,
         train_dataset=traindata,
@@ -105,6 +101,8 @@ def train(
         model=model,
     )
 
+    
+    
     trainer.train()
     
     if os.path.isdir("./temp"):
@@ -144,7 +142,7 @@ if __name__ == "__main__":
         "%-BRA", #13
     ]
 
-    include_idx = [2, 10, 11, 12, 13]
+    include_idx = [10, 11, 12, 13]
     include_classes = [classes[i] for i in include_idx]
 
     id2label = {i+1: c for i, c in enumerate(include_classes)}
@@ -163,10 +161,13 @@ if __name__ == "__main__":
     
     tokenizer = AutoTokenizer.from_pretrained("ltg/norbert3-large")
 
-    data = load_data()
+    train_path = "./formated_data/train_generated_dataset.jsonl"
+    
+    with open(train_path, "r") as f:
+        train_raw = [json.loads(line) for line in f]
 
-    documents = [inst["text"] for inst in data]
-    labels = [inst["label"] for inst in data]
+    documents = [inst["text"] for inst in train_raw]
+    labels = [inst["label"] for inst in train_raw]
 
     fixed_labels = []
     for label in labels:
@@ -176,15 +177,11 @@ if __name__ == "__main__":
         elif isinstance(label, list):
             fixed_labels.append(label[0])
 
-        elif isinstance(label, str):
-            fixed_labels.append(label)
-
-
     labels = [label2id[label] for label in fixed_labels]
     
     tokenized_docs = tokenizer(documents, truncation=True, padding=False, max_length=512)
-    
-    train_dataset = CustomDataset(tokenized_docs, labels)
+
+    train_dataset = TrainDataset(tokenized_docs, labels)
 
     train(model, tokenizer, train_dataset)
 
