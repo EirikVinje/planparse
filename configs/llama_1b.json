@@ -1,13 +1,13 @@
 {
-    "config_name": "mistral7b",
-    "template_path": "./prompt_templates/mistral_7b_v1.jinja",
+    "config_name": "llama_1b",
+    "template_path": "./prompt_templates/llama/llama_1b_v1.jinja",
     "train_path": "./data",
     "model_config": {
-        "access_token": "./access_token/token.txt",
-        "huggingface_model": "NorwAI/NorwAI-Mistral-7B-instruct",
+        "access_token": "none",
+        "huggingface_model": "NbAiLab/nb-llama-3.2-1B-Instruct",
         "torch_dtype": "float16",
-        "load_in_4bit": true,
-        "load_in_8bit": false,
+        "load_in_4bit": false,
+        "load_in_8bit": true,
         "lora_dropout": 0.1,
         "lora_alpha": 16,
         "device": "cuda",
@@ -15,7 +15,7 @@
     },
     "trainer_config": {
         "save_dir": "./local_models/",
-        "run_name": "run_mistral7b",
+        "run_name": "run_llama_1b",
         "per_device_train_batch_size": 1,
         "gradient_accumulation_steps": 1,
         "torch_empty_cache_steps": true,

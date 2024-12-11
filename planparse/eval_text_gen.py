@@ -79,7 +79,7 @@ if __name__ == "__main__":
     config["generation_config"]["max_new_tokens"] = 300
     prompter = Prompter(config["template_path"])
     prompter.load()
-    logger.info("loaded promp template from : {}".format(config["template_path"]))    
+    logger.info("loaded promp template from : {}".format(config["template_path"]))
 
     documents = [prompter(doc, None) for doc in data]
     print(documents[0])

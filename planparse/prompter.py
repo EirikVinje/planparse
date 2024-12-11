@@ -26,8 +26,7 @@ class Prompter:
         context = copy.deepcopy(context)        
         
         rendered_context = {
-            "document" : context, 
-            "output_text" : output,
+            "text" : context, 
             }
 
         rendered_template = self.template.render(rendered_context)
@@ -42,7 +41,7 @@ class Prompter:
 
 if __name__ == "__main__":
 
-    template_path = "./prompt_templates/mistral_7b_train_vt.jinja"
+    template_path = "./prompt_templates/llama/llama_1b_v1.jinja"
 
     prompter = Prompter(
         template_path = template_path,   

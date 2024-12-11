@@ -146,7 +146,7 @@ def train(
 
 if __name__ == "__main__":
 
-    if not os.path.isfile("./setup.sh"):
+    if not os.path.isfile("./setup.py"):
         raise Exception("Please run from the root of the repository")
     
     parser = argparse.ArgumentParser()
