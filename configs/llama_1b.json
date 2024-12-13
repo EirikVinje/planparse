@@ -2,10 +2,11 @@
     "config_name": "llama_1b",
     "template_path": "./prompt_templates/llama/llama_1b_v1.jinja",
     "train_path": "./data",
+    
     "model_config": {
         "access_token": "none",
         "huggingface_model": "NbAiLab/nb-llama-3.2-1B-Instruct",
-        "torch_dtype": "float16",
+        "torch_dtype": "float32",
         "load_in_4bit": false,
         "load_in_8bit": true,
         "lora_dropout": 0.1,
@@ -25,6 +26,7 @@
         "optim": "adamw_torch",
         "num_train_epochs": 1,
         "learning_rate": 0.0001,
+        "eval_strategy": "epoch",
         "warmup_steps": 200,
         "weight_decay": 0.01,
         "max_steps": -1,
@@ -32,6 +34,7 @@
         "data_seed": 42,
         "seed": 42
     },
+    
     "generation_config": {
         "max_new_tokens": 30,
         "do_sample": false

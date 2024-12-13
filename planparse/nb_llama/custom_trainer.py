@@ -65,7 +65,7 @@ def data_collator(batch_input):
     return new_batch_input
 
 
-def train(
+def train_model(
     model: CausalTextClSModel,
     train_dataloader: DataLoader,
     val_dataloader: DataLoader
@@ -78,93 +78,91 @@ def train(
         train_dataloader (DataLoader): Dataloader for the training data.
         val_dataloader (DataLoader): Dataloader for the validation data.
     """
-
+    
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    model.to(device)
     num_epochs = 5
+    max_grad_norm = 0.8
     log_interval = 10
-    eval_interval = 100
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=5e-5)
+    
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=0.9)
 
-    model.to(device)
+    global_step = 0
+    acc = 0.0
+    
+    with tqdm(total=num_epochs * len(train_dataloader), desc=f"(epoch : None) - (loss : None) - (accuracy : None) - (lr : None)") as pbar:
 
-    for epoch in range(num_epochs):
-        print(f"Epoch {epoch + 1}/{num_epochs}")
-        model.train()
+        for epoch in range(num_epochs):
+            
+            for step, batch in enumerate(train_dataloader):
+                
+                input_ids = batch["input_ids"]
+                attention_mask = batch["attention_mask"]
+                labels = batch["labels"]
 
-        total_loss = 0
-        for step, batch in enumerate(tqdm(train_dataloader), start=1):
-            input_ids = batch["input_ids"].to(device)
-            attention_mask = batch["attention_mask"].to(device)
-            labels = batch["labels"].to(device)
+                optimizer.zero_grad()
+                outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
+                
+                loss = outputs.loss
+                loss.backward()
+                
+                # torch.nn.utils.clip_grad_norm_(model.parameters(), max_grad_norm)
+                
+                optimizer.step()
 
-            optimizer.zero_grad()
+                pbar.set_description(f"(epoch : {epoch}) - (loss : {loss.item():.4f}) - (accuracy : {acc:.4f}) - (lr : {optimizer.param_groups[0]['lr']:.4f})")
 
-            # Forward pass
-            outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
-            loss = outputs.loss
+                global_step += 1
+                pbar.update(1)
 
-            # Backward pass
-            loss.backward()
-            optimizer.step()
+            # acc = evaluate_model(model, val_dataloader, device)
 
-            total_loss += loss.item()
-
-            # Logging
-            if step % log_interval == 0:
-                print(f"Step {step}, Loss: {loss.item():.4f}")
-
-            # Evaluation
-            if step % eval_interval == 0:
-                evaluate(model, val_dataloader, device)
-
-        # End of epoch logging
-        avg_train_loss = total_loss / len(train_dataloader)
-        print(f"Epoch {epoch + 1} completed. Average training loss: {avg_train_loss:.4f}")
-
-        # Adjust the learning rate
-        scheduler.step()
-
-    print("Training complete.")
+            scheduler.step()
+            
+            pbar.set_description(f"(epoch : {epoch}) - (loss : {loss.item():.4f}) - (accuracy : {acc:.4f}) - (lr : {optimizer.param_groups[0]['lr']:.4f})")
 
 
-def evaluate(model, dataloader, device):
+def evaluate_model(
+        model: CausalTextClSModel, 
+        dataloader: DataLoader, 
+        device: str = "cuda"
+        ):
+    
     """
-    Evaluation loop for the model.
+    Evaluate the model on a validation dataset.
 
     Args:
         model (CausalTextClSModel): Model to evaluate.
-        dataloader (DataLoader): Dataloader for the evaluation data.
-        device (str): Device to run the evaluation on.
+        dataloader (DataLoader): Validation dataloader.
+        device (str): Device to run evaluation on.
+
     """
-    model.eval()
-    total_loss = 0
+
     correct_predictions = 0
     total_predictions = 0
 
     with torch.no_grad():
-        for batch in tqdm(dataloader):
-            input_ids = batch["input_ids"].to(device)
-            attention_mask = batch["attention_mask"].to(device)
-            labels = batch["labels"].to(device)
+        for batch in tqdm(dataloader, desc="eval", leave=False):
+            input_ids = batch["input_ids"]
+            attention_mask = batch["attention_mask"]
+            labels = batch["labels"]
 
             outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
-            loss = outputs.loss
+
             logits = outputs.logits
-
-            total_loss += loss.item()
-
+            
             predictions = torch.argmax(logits, dim=-1)
             correct_predictions += (predictions == labels).sum().item()
             total_predictions += labels.size(0)
 
-    avg_loss = total_loss / len(dataloader)
     accuracy = correct_predictions / total_predictions
+    
+    return accuracy
 
-    print(f"Validation Loss: {avg_loss:.4f}, Accuracy: {accuracy:.4f}")
 
-    return avg_loss, accuracy
+
 
 
 if __name__ == "__main__":
@@ -251,6 +249,7 @@ if __name__ == "__main__":
     model.init_seq_cls_head()
 
     model.to("cuda")
+    model.train()
 
     tokenized_train_x = model.tokenizer(train_x, truncation=True, padding=False)
     train_dataset = CustomDataset(tokenized_train_x, train_y)
@@ -258,7 +257,7 @@ if __name__ == "__main__":
     tokenized_eval_x = model.tokenizer(eval_x, truncation=True, padding=False)
     eval_dataset = CustomDataset(tokenized_eval_x, eval_y)
 
-    train_dataloader = DataLoader(train_dataset, batch_size=2, shuffle=False, collate_fn=data_collator)
-    eval_dataloader = DataLoader(eval_dataset, batch_size=1, shuffle=False, collate_fn=data_collator)    
+    train_dataloader = DataLoader(train_dataset, batch_size=16, shuffle=False, collate_fn=data_collator)
+    eval_dataloader = DataLoader(eval_dataset, batch_size=16, shuffle=False, collate_fn=data_collator)    
 
-    train(model, train_dataloader, eval_dataloader)
+    train_model(model, train_dataloader, eval_dataloader)

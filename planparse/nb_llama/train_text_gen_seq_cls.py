@@ -1,31 +1,29 @@
 """
 Implement a class for sequence classification. E.g to ltg/norbert3-large (https://huggingface.co/ltg/norbert3-large)
 """
-
+from typing import Dict
 import argparse 
 import shutil
 import datetime
 import json
 import os
 
-from transformers import AutoModelForMaskedLM, AutoTokenizer, AutoModelForSequenceClassification
-from sklearn.model_selection import train_test_split
 from transformers import Trainer, TrainingArguments
-from torch.utils.data import DataLoader, Dataset
-from torch.utils.data import SequentialSampler
+from torch.utils.data import SequentialSampler, Dataset
 from torch.nn.utils.rnn import pad_sequence
+from transformers import PretrainedConfig
 from torch import nn
 import numpy as np
 import evaluate
 import torch
 
-from llm_base_text_gen_seq_cls import CuasalTextClSModel
+from llm_base_text_gen_seq_cls import CausalTextClSModel
 from planparse.prompter import Prompter
 
 
-# class SequentialTrainer(Trainer):
-#     def get_train_sampler(self):
-#         return SequentialSampler(self.train_dataset)
+class SequentialTrainer(Trainer):
+    def get_train_sampler(self):
+        return SequentialSampler(self.train_dataset)
 
 
 def data_collator(batch_input):
@@ -63,7 +61,6 @@ def compute_metrics(eval_preds):
     return output
 
 
-
 class CustomDataset(Dataset):
     def __init__(self, encodings, labels):
 
@@ -90,10 +87,13 @@ class CustomDataset(Dataset):
 
 
 def train(
-        model : CuasalTextClSModel,
+        model : CausalTextClSModel,
         traindata : CustomDataset,
-        evaldata : CustomDataset
+        evaldata : CustomDataset,
+        config : Dict
         ):
+
+    config = config["trainer_config"]
 
     savedir = "./local_models_storage/"
     
@@ -101,30 +101,27 @@ def train(
         shutil.rmtree("./temp")
     
     trainerargs = TrainingArguments(
-        per_device_train_batch_size=1,
-        gradient_accumulation_steps=1,
-        torch_empty_cache_steps=True,
-        eval_strategy="epoch",
-        lr_scheduler_type="linear",
-        num_train_epochs=5,
-        run_name="run_norbert",
-        learning_rate=0.001,
-        logging_steps=10,
-        warmup_steps=100,
-        weight_decay=0.01,
-        output_dir="./temp",
-        max_steps=-1,
-        data_seed=42,
-        optim="adamw_torch",
-        seed=42,
-        report_to="none",
+        per_device_train_batch_size=config["per_device_train_batch_size"],
+        gradient_accumulation_steps=config["gradient_accumulation_steps"],
+        torch_empty_cache_steps=config["torch_empty_cache_steps"],
+        lr_scheduler_type=config["lr_scheduler_type"],
+        num_train_epochs=config["num_train_epochs"],
+        eval_strategy=config["eval_strategy"],
+        learning_rate=config["learning_rate"],
+        logging_steps=config["logging_steps"],
+        warmup_steps=config["warmup_steps"],
+        weight_decay=config["weight_decay"],
+        output_dir=config["output_dir"],
+        max_steps=config["max_steps"],
+        report_to=config["report_to"],
+        data_seed=config["data_seed"],
+        run_name=config["run_name"],
+        optim=config["optim"],
+        seed=config["seed"],
     )
 
-    training_args = trainerargs.set_dataloader(pin_memory=False)
+    trainerargs.set_dataloader(pin_memory=False)
 
-
-    model.train()
-    
     trainer = Trainer(
         compute_metrics=compute_metrics,
         data_collator=data_collator,
@@ -141,9 +138,6 @@ def train(
         shutil.rmtree("./temp")
 
     save_path = os.path.join(savedir, "norbert-seqcls-{}".format(datetime.datetime.now().strftime("%Y%m%d%H%M%S")))
-
-    model.save_pretrained(save_path)
-    tokenizer.save_pretrained(save_path)
 
     print(f"Model and tokenizer saved to : {save_path}")    
 
@@ -227,10 +221,7 @@ if __name__ == "__main__":
 
     eval_y = [label2id[label] for label in fixed_labels]
 
-    model = CuasalTextClSModel(config=config, n_labels=len(label2id))
-
-    model.load_base_model()
-    model.init_seq_cls_head()
+    model = CausalTextClSModel(config=config, n_labels=len(label2id))
 
     model.to("cuda")
 
@@ -243,10 +234,8 @@ if __name__ == "__main__":
     # sample = [train_dataset.__getitem__(0)]
     # output = model(**data_collator(sample))
     # print(output)
-    
-    # print(model.parameters())
 
-    train(model, train_dataset, eval_dataset)
+    train(model, train_dataset, eval_dataset, config)
 
 
 
