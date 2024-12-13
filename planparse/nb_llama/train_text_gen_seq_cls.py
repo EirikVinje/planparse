@@ -8,10 +8,13 @@ import datetime
 import json
 import os
 
+from pprint import pprint
+
+from torch.utils.data import SequentialSampler, Dataset, DataLoader
 from transformers import Trainer, TrainingArguments
-from torch.utils.data import SequentialSampler, Dataset
 from torch.nn.utils.rnn import pad_sequence
 from transformers import PretrainedConfig
+from peft import get_peft_model
 from torch import nn
 import numpy as np
 import evaluate
@@ -21,10 +24,14 @@ from llm_base_text_gen_seq_cls import CausalTextClSModel
 from planparse.prompter import Prompter
 
 
-class SequentialTrainer(Trainer):
-    def get_train_sampler(self):
-        return SequentialSampler(self.train_dataset)
-
+class Trainer(Trainer):
+    def _get_train_dataloader(self):
+        return DataLoader(
+            self.train_dataset,
+            batch_size=self.args.per_device_train_batch_size,
+            shuffle=False,  # Ensure sequential
+            collate_fn=self.data_collator
+        )
 
 def data_collator(batch_input):
     
@@ -96,12 +103,13 @@ def train(
     config = config["trainer_config"]
 
     savedir = "./local_models_storage/"
-    
+
     if os.path.isdir("./temp"):
         shutil.rmtree("./temp")
     
     trainerargs = TrainingArguments(
         per_device_train_batch_size=config["per_device_train_batch_size"],
+        per_device_eval_batch_size=config["per_device_eval_batch_size"],
         gradient_accumulation_steps=config["gradient_accumulation_steps"],
         torch_empty_cache_steps=config["torch_empty_cache_steps"],
         lr_scheduler_type=config["lr_scheduler_type"],
@@ -109,6 +117,7 @@ def train(
         eval_strategy=config["eval_strategy"],
         learning_rate=config["learning_rate"],
         logging_steps=config["logging_steps"],
+        save_strategy=config["save_strategy"],
         warmup_steps=config["warmup_steps"],
         weight_decay=config["weight_decay"],
         output_dir=config["output_dir"],
@@ -120,7 +129,10 @@ def train(
         seed=config["seed"],
     )
 
-    trainerargs.set_dataloader(pin_memory=False)
+    trainerargs = trainerargs.set_dataloader(pin_memory=False)
+    
+    trainerargs.per_device_train_batch_size = config["per_device_train_batch_size"]
+    trainerargs.per_device_eval_batch_size = config["per_device_eval_batch_size"]
 
     trainer = Trainer(
         compute_metrics=compute_metrics,
@@ -132,14 +144,16 @@ def train(
         model=model,
     )
 
-    trainer.train()
+    metrics = trainer.train()
+    print(metrics)
     
+
     if os.path.isdir("./temp"):
         shutil.rmtree("./temp")
 
-    save_path = os.path.join(savedir, "norbert-seqcls-{}".format(datetime.datetime.now().strftime("%Y%m%d%H%M%S")))
+    # save_path = os.path.join(savedir, "norbert-seqcls-{}".format(datetime.datetime.now().strftime("%Y%m%d%H%M%S")))
+    # print(f"Model and tokenizer saved to : {save_path}")    
 
-    print(f"Model and tokenizer saved to : {save_path}")    
 
 
 
@@ -164,38 +178,29 @@ if __name__ == "__main__":
         eval_path = "./formated_data/smoke/eval_smoke.jsonl"
     
     else:
-        train_path = "./formated_data/huge/splits/train.jsonl"
-        eval_path = "./formated_data/huge/splits/eval.jsonl"
+        train_path = config["train_path"]
+        eval_path = config["eval_path"]
 
-    label2id = {
-        "none" : 0,
-        "%-BYA" : 1,
-        "BYA" : 2,
-        "BRA" : 3,
-        "%-BRA" : 4,
-    }
+    label2id = config["label2id"]
+    
+    prompter = Prompter(
+        template_path = config["template_path"],   
+    )
+    prompter.load()
 
     with open(train_path, "r") as f:
         train_raw = [json.loads(line) for line in f]
 
     train_x = [inst["text"] for inst in train_raw]
     train_y = [inst["label"] for inst in train_raw]
-
-    prompter = Prompter(
-        template_path = config["template_path"],   
-    )
+    train_x = [prompter(inst) for inst in train_raw]
     
-    prompter.load()
-
-    train_x = [prompter(inst, None) for inst in train_x]
-
     fixed_labels = []
     for label in train_y:
         if label == []:
             fixed_labels.append("none")
         elif isinstance(label, list):
             fixed_labels.append(label[0])
-
     train_y = [label2id[label] for label in fixed_labels]
 
     with open(eval_path, "r") as f:
@@ -203,14 +208,7 @@ if __name__ == "__main__":
 
     eval_x = [inst["text"] for inst in eval_raw]
     eval_y = [inst["label"] for inst in eval_raw]
-
-    prompter = Prompter(
-        template_path = config["template_path"],   
-    )
-    
-    prompter.load()
-
-    train_x = [prompter(inst, None) for inst in eval_x]
+    eval_x = [prompter(inst) for inst in eval_x]
 
     fixed_labels = []
     for label in eval_y:
@@ -218,12 +216,11 @@ if __name__ == "__main__":
             fixed_labels.append("none")
         elif isinstance(label, list):
             fixed_labels.append(label[0])
-
-    eval_y = [label2id[label] for label in fixed_labels]
+    eval_y = [label2id[label] for label in fixed_labels] 
 
     model = CausalTextClSModel(config=config, n_labels=len(label2id))
 
-    model.to("cuda")
+    model.to_device()
 
     tokenized_train_x = model.tokenizer(train_x, truncation=True, padding=False)
     train_dataset = CustomDataset(tokenized_train_x, train_y)
@@ -231,11 +228,8 @@ if __name__ == "__main__":
     tokenized_eval_x = model.tokenizer(eval_x, truncation=True, padding=False)
     eval_dataset = CustomDataset(tokenized_eval_x, eval_y)
 
-    # sample = [train_dataset.__getitem__(0)]
-    # output = model(**data_collator(sample))
-    # print(output)
-
     train(model, train_dataset, eval_dataset, config)
+    
 
 
 

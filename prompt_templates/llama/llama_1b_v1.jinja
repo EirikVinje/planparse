@@ -10,3 +10,9 @@ Analyser teksten for å finne referanser til "utnyttingsgrad" — en betegnelse 
 Hvis det ikke finnes noe referanse til disse utnyttingsgradene, så sier du at det finnes ingen utnyttingsgrader i teksten.<|eot_id|><|start_header_id|>user<|end_header_id|>
 
 Tekst: {{ text }}<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+{% if label -%} 
+utnyttingsgrad: {{ label }}<|eot_id|>
+{% else -%}
+utnyttingsgrad:
+{% endif %}

@@ -1,7 +1,9 @@
 {
     "config_name": "llama_1b",
     "template_path": "./prompt_templates/llama/llama_1b_v1.jinja",
-    "train_path": "./data",
+    "train_path": "./formated_data/huge/subset/train.jsonl",
+    "eval_path": "./formated_data/huge/subset/eval.jsonl",
+    "test_path": "./formated_data/huge/subset/test.jsonl",
     
     "model_config": {
         "access_token": "none",
@@ -14,19 +16,22 @@
         "device": "cuda",
         "r": 8
     },
+
     "trainer_config": {
-        "save_dir": "./local_models/",
-        "run_name": "run_llama_1b",
-        "per_device_train_batch_size": 1,
-        "gradient_accumulation_steps": 1,
+        "per_device_train_batch_size": 8,
+        "per_device_eval_batch_size": 8,
+        "gradient_accumulation_steps": 2,
         "torch_empty_cache_steps": true,
         "lr_scheduler_type": "linear",
-        "logging_steps": 100000,
+        "save_dir": "./local_models/",
+        "run_name": "run_llama_1b",
+        "logging_steps": 10,
         "output_dir": "./temp",
         "optim": "adamw_torch",
-        "num_train_epochs": 1,
+        "num_train_epochs": 5,
         "learning_rate": 0.0001,
         "eval_strategy": "epoch",
+        "save_strategy": "no",
         "warmup_steps": 200,
         "weight_decay": 0.01,
         "max_steps": -1,
@@ -38,5 +43,14 @@
     "generation_config": {
         "max_new_tokens": 30,
         "do_sample": false
+    },
+
+    "label2id": {
+        "none" : 0,
+        "%-BYA" : 1,
+        "BYA" : 2,
+        "BRA" : 3,
+        "%-BRA" : 4
     }
+
 }

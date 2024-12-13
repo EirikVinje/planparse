@@ -21,22 +21,33 @@ class Prompter:
 
         self.template = Template(self.raw_template_text)
 
-    def _generate_prompt(self, context, output):
+    def _generate_prompt(self, context):
 
-        context = copy.deepcopy(context)        
-        
-        rendered_context = {
-            "text" : context, 
+        context = copy.deepcopy(context)
+
+        if isinstance(context, dict):
+            rendered_context = {
+                "text" : context.get("text", ""),
+                "label" : context.get("label", ""),
             }
-
-        rendered_template = self.template.render(rendered_context)
+            rendered_template = self.template.render(rendered_context)
         
+        elif isinstance(context, str):
+            rendered_template = {
+                "text" : context
+            }
+            rendered_template = self.template.render(rendered_template)
+
+        else:
+            raise ValueError(f"Invalid context type {type(context)}")
+            
         rendered_template = rendered_template.strip()
 
         return rendered_template
     
-    def __call__(self, context, output):
-        return self._generate_prompt(context, output)
+    
+    def __call__(self, context):
+        return self._generate_prompt(context)
         
 
 if __name__ == "__main__":
@@ -49,9 +60,9 @@ if __name__ == "__main__":
     
     prompter.load()
 
+    # input_text = {"text" : "Dette er et dokument med utnyttingsgrader! æøå", "label" : "BYA"}
     input_text = "Dette er et dokument med utnyttingsgrader! æøå"
-    output = '{"utnyttingsgrad": ["BYA"]}'
 
-    output = prompter(input_text, output)
+    output = prompter(input_text)
 
     print(output)    

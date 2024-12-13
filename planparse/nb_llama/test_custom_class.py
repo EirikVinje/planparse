@@ -102,7 +102,7 @@ class CausalTextClSModel(PreTrainedModel):
             padding_side="left",
         )
 
-        self._base_model = AutoModel.from_pretrained(
+        self.model = AutoModel.from_pretrained(
             pretrained_model_name_or_path=self.huggingface_model,
         )
 
