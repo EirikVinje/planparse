@@ -18,44 +18,55 @@ def generate_config(
 
     config["config_name"] = config_name
     config["template_path"] = template_path
-    config["train_path"] = "./data"
+    config["train_path"] = "./formated_data/huge/splits/train.jsonl"
+    config["eval_path"] = "./formated_data/huge/splits/eval.jsonl"
+    config["test_path"] = "./formated_data/huge/splits/test.jsonl"
 
     config["model_config"] = {
-        "access_token": access_token,
+        "access_token": None,
         "huggingface_model": model,
-        "torch_dtype": "float16",
-        "load_in_4bit": True,
+        "torch_dtype": "float32",
+        "load_in_4bit": False,
         "load_in_8bit": False,
         "lora_dropout": 0.1,
         "lora_alpha": 16,
         "device": "cuda",
         "r": 8,
         }
+
+    
+    run_name = model.split("/")
+    run_name = "_".join(run_name).replace(".", "_")
     
     config["trainer_config"] = {
+        "run_name": run_name,
+        "lr_scheduler_type": "linear",
         "save_dir": "./local_models/",
-        "run_name" : "run_{}".format(config["config_name"]),
-        "per_device_train_batch_size" : 1,
-        "gradient_accumulation_steps" : 1,
-        "torch_empty_cache_steps" : True,
-        "lr_scheduler_type" : "linear",
-        "eval_strategy" : "epoch",
-        "logging_steps" : 100000,
-        "output_dir" :  "./temp",
-        "optim" : "adamw_torch",
-        "num_train_epochs" : 1,
-        "learning_rate" : 1e-4,
-        "warmup_steps" : 200,
-        "weight_decay" : 0.01,
-        "max_steps" :   -1,
-        "report_to" : "none",
-        "data_seed" : 42,
-        "seed" : 42,
+        "output_dir": "./temp",
+        "optim": "adamw_torch",
+        "eval_strategy": "epoch",
+        "num_train_epochs": 1,
+        "save_strategy": "no",
+        "report_to": "none",
+        "logging_steps": 1,
+        "torch_empty_cache_steps": True,
+        "per_device_train_batch_size": 4,
+        "per_device_eval_batch_size": 4,
+        "gradient_accumulation_steps": 4,
+        "learning_rate": 0.0001,
+        "warmup_steps": 200,
+        "weight_decay": 0.001,
+        "max_steps": -1,
+        "data_seed": 42,
+        "seed": 42
     }
 
-    config["generation_config"] = {
-        "max_new_tokens": 30,
-        "do_sample": False,
+    config["label2id"] = {
+        "none" : 0,
+        "%-BYA" : 1,
+        "BYA" : 2,
+        "BRA" : 3,
+        "%-BRA" : 4
     }
 
     return config

@@ -6,7 +6,7 @@
     "test_path": "./formated_data/huge/splits/test.jsonl",
     
     "model_config": {
-        "access_token": "none",
+        "access_token": null,
         "huggingface_model": "NbAiLab/nb-llama-3.2-1B-Instruct",
         "torch_dtype": "float32",
         "load_in_4bit": false,
@@ -27,7 +27,6 @@
         "run_name": "NbAiLab_nb-llama-3_2-1B-Instruct",
         "logging_steps": 1,
         "output_dir": "./temp",
-        "logging_dir": "./training_logs",
         "optim": "adamw_torch",
         "num_train_epochs": 1,
         "learning_rate": 0.0001,

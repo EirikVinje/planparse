@@ -4,13 +4,14 @@ import os
 
 from transformers import PreTrainedModel, PretrainedConfig, AutoModel, AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from transformers.modeling_outputs import SequenceClassifierOutput
+from transformers import Trainer, TrainingArguments
 from peft import LoraConfig, get_peft_model
+from torch.utils.data import Dataset
+from huggingface_hub import login
 import torch.nn as nn
 import numpy as np
 import torch
 
-from transformers import Trainer, TrainingArguments
-from torch.utils.data import Dataset
 
 
 
@@ -49,14 +50,17 @@ class CausalTextClSModel(nn.Module):
 
         super(CausalTextClSModel, self).__init__()
         
-        self._config = config
+        self._config = config["model_config"]
+
+        if config["access_token"] is not None or config["access_token"] != "none":
+            login(config["access_token"])
         
-        huggingface_model = self._config["model_config"]["huggingface_model"]
-        load_in_4bit = self._config["model_config"]["load_in_4bit"]
-        load_in_8bit = self._config["model_config"]["load_in_8bit"]
-        lora_dropout = self._config["model_config"]["lora_dropout"]
-        lora_alpha = self._config["model_config"]["lora_alpha"]
-        r = self._config["model_config"]["r"]
+        huggingface_model = self._config["huggingface_model"]
+        load_in_4bit = self._config["load_in_4bit"]
+        load_in_8bit = self._config["load_in_8bit"]
+        lora_dropout = self._config["lora_dropout"]
+        lora_alpha = self._config["lora_alpha"]
+        r = self._config["r"]
 
         self.device = self._config["model_config"]["device"]
         self.local_path = local_path
@@ -73,8 +77,6 @@ class CausalTextClSModel(nn.Module):
 
         self.tokenizer.add_special_tokens({'pad_token': "[PAD]"})
         
-    
-
         # quantization_config = BitsAndBytesConfig(
         #         load_in_4bit=load_in_4bit,
         #         load_in_8bit=load_in_8bit,
