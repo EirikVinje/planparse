@@ -71,6 +71,10 @@ class CausalTextClSModel(nn.Module):
             padding_side="left",
         )
 
+        self.tokenizer.add_special_tokens({'pad_token': "[PAD]"})
+        
+    
+
         # quantization_config = BitsAndBytesConfig(
         #         load_in_4bit=load_in_4bit,
         #         load_in_8bit=load_in_8bit,
@@ -137,6 +141,18 @@ class CausalTextClSModel(nn.Module):
 
         self.backend.to(device)
         self.classifier_head.to(device)
+
+
+    def train(self):
+
+        self.backend.train()
+        self.classifier_head.train()
+    
+
+    def eval(self):
+
+        self.backend.eval()
+        self.classifier_head.eval()
 
 
 if __name__ == "__main__":
