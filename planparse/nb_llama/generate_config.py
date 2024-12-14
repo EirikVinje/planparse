@@ -45,6 +45,7 @@ def generate_config(
         "output_dir": "./temp",
         "optim": "adamw_torch",
         "eval_strategy": "epoch",
+        "logging_dir" : "./training_logs",
         "num_train_epochs": 1,
         "save_strategy": "no",
         "report_to": "none",

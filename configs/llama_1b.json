@@ -18,13 +18,14 @@
     },
 
     "trainer_config": {
+        "run_name": "NbAiLab_nb-llama-3_2-1B-Instruct",
+        "logging_dir" : "./training_logs",
         "per_device_train_batch_size": 4,
         "per_device_eval_batch_size": 4,
         "gradient_accumulation_steps": 4,
         "torch_empty_cache_steps": true,
         "lr_scheduler_type": "linear",
         "save_dir": "./local_models/",
-        "run_name": "NbAiLab_nb-llama-3_2-1B-Instruct",
         "logging_steps": 1,
         "output_dir": "./temp",
         "optim": "adamw_torch",

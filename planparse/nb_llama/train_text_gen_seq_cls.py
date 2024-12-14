@@ -205,13 +205,14 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--smoke", action='store_true', help="Run a small dataset for testing")
+    parser.add_argument("--config", type=str, help="path to model config", required=True)
     args = parser.parse_args()
 
     if torch.cuda.is_available():
         print("Device: {}".format(torch.cuda.get_device_name(0)))
         print("Memory Usage: {}/{}".format(round(torch.cuda.memory_allocated(0)/1024**3,1), round(torch.cuda.memory_reserved(0)/1024**3,1)))
 
-    with open("./configs/llama_1b.json", "r") as f:
+    with open(args.config, "r") as f:
         config = json.load(f)
 
     if args.smoke:

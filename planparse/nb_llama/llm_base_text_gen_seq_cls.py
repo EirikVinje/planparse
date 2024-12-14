@@ -52,8 +52,10 @@ class CausalTextClSModel(nn.Module):
         
         self._config = config["model_config"]
 
-        if config["access_token"] is not None or config["access_token"] != "none":
-            login(config["access_token"])
+        if self._config["access_token"] is not None and self._config["access_token"] not in ["None", "none", "NONE"]:
+            with open(self._config["access_token"], "r") as f:
+                self.access_token = f.read().strip()
+            login(token=self.access_token)
         
         huggingface_model = self._config["huggingface_model"]
         load_in_4bit = self._config["load_in_4bit"]
@@ -62,7 +64,7 @@ class CausalTextClSModel(nn.Module):
         lora_alpha = self._config["lora_alpha"]
         r = self._config["r"]
 
-        self.device = self._config["model_config"]["device"]
+        self.device = self._config["device"]
         self.local_path = local_path
         self.n_labels = n_labels
         
