@@ -1,11 +1,9 @@
-"""
-Implement a class for sequence classification. E.g to ltg/norbert3-large (https://huggingface.co/ltg/norbert3-large)
-"""
-
+from typing import Dict
 import argparse 
 import shutil
 import datetime
 import json
+import csv
 import os
 
 from transformers import AutoModelForMaskedLM, AutoTokenizer, AutoModelForSequenceClassification
@@ -14,15 +12,42 @@ from transformers import Trainer, TrainingArguments
 from torch.utils.data import DataLoader, Dataset
 from torch.utils.data import SequentialSampler
 from torch.nn.utils.rnn import pad_sequence
+from sklearn.metrics import accuracy_score
+from transformers import TrainerCallback
 from torch import nn
 import numpy as np
-import evaluate
 import torch
 
+from load_data import load_and_format
 
-class SequentialTrainer(Trainer):
-    def get_train_sampler(self):
-        return SequentialSampler(self.train_dataset)
+
+class SaveLossCallback(TrainerCallback):
+    def __init__(self, log_dir):
+        
+        self.log_dir = log_dir
+        
+        os.makedirs(log_dir, exist_ok=True)
+        
+        self.log_file = os.path.join(log_dir, "loss_log.csv")
+        
+        with open(self.log_file, "w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow(["Step", "Loss", "Learning Rate", "Epoch", "Global Step", "eval_accuracy"])
+
+    def on_log(self, args, state, control, logs=None, **kwargs):
+        
+        if logs is not None and "loss" in logs:
+            
+            with open(self.log_file, "a", newline="") as f:
+                writer = csv.writer(f)
+                writer.writerow([
+                    state.global_step,       
+                    logs.get("loss", "N/A"),  
+                    logs.get("learning_rate", "N/A"), 
+                    state.epoch,             
+                    state.global_step,
+                    "N/A"
+                ])
 
 
 def data_collator(batch_input):
@@ -31,8 +56,8 @@ def data_collator(batch_input):
 
     input_ids = [torch.tensor(inst["input_ids"], dtype=torch.long) for inst in batch_input]
     attention_mask = [torch.tensor(inst["attention_mask"], dtype=torch.long) for inst in batch_input]
-    input_ids = pad_sequence(input_ids, batch_first=True, padding_value=1)
-    attention_mask = pad_sequence(attention_mask, batch_first=True, padding_value=0)
+    input_ids = pad_sequence(input_ids, batch_first=True, padding_value=1, padding_side="left")
+    attention_mask = pad_sequence(attention_mask, batch_first=True, padding_value=0, padding_side="left")
 
     labels = torch.tensor([inst["labels"] for inst in batch_input], dtype=torch.long) if "labels" in batch_input[0] else None
 
@@ -44,21 +69,6 @@ def data_collator(batch_input):
         new_batch_input["labels"] = labels.to(device)
 
     return new_batch_input
-
-
-def compute_metrics(eval_preds):
-    
-    metric = evaluate.load("accuracy")
-    logits, true_labels = eval_preds
-
-    predictions = np.argmax(logits, axis=1)
-    
-    output = {
-        "accuracy": metric.compute(predictions=predictions, references=true_labels)['accuracy'],
-    }
-    
-    return output
-
 
 
 class CustomDataset(Dataset):
@@ -90,58 +100,94 @@ def train(
         model : AutoModelForSequenceClassification,
         tokenizer : AutoTokenizer,
         traindata : CustomDataset,
-        evaldata : CustomDataset
+        evaldata : CustomDataset,
+        testdata : CustomDataset,
+        trainer_config : Dict,
         ):
 
     savedir = "./local_models_storage/"
+    logdir = os.path.join(trainer_config["logging_dir"], trainer_config["run_name"] + "_" + datetime.datetime.now().strftime('%Y%m%d_%H:%M'))
+
+    print(f"logs and results will be saved to : {logdir}")
     
     if os.path.isdir("./temp"):
         shutil.rmtree("./temp")
     
     trainerargs = TrainingArguments(
-        per_device_train_batch_size=8,
-        gradient_accumulation_steps=2,
-        torch_empty_cache_steps=True,
-        eval_strategy="epoch",
-        lr_scheduler_type="linear",
-        num_train_epochs=5,
-        run_name="run_norbert",
-        learning_rate=0.001,
-        logging_steps=10,
-        warmup_steps=100,
-        weight_decay=0.01,
-        output_dir="./temp",
-        max_steps=-1,
-        data_seed=42,
-        optim="adamw_torch",
-        seed=42,
-        report_to="none",
+        per_device_train_batch_size=trainer_config["per_device_train_batch_size"],
+        gradient_accumulation_steps=trainer_config["gradient_accumulation_steps"],
+        per_device_eval_batch_size=trainer_config["per_device_eval_batch_size"],
+        torch_empty_cache_steps=trainer_config["torch_empty_cache_steps"],
+        lr_scheduler_type=trainer_config["lr_scheduler_type"],
+        num_train_epochs=trainer_config["num_train_epochs"],
+        eval_strategy=trainer_config["eval_strategy"],
+        learning_rate=trainer_config["learning_rate"],
+        logging_steps=trainer_config["logging_steps"],
+        save_strategy=trainer_config["save_strategy"],
+        warmup_steps=trainer_config["warmup_steps"],
+        weight_decay=trainer_config["weight_decay"],
+        logging_dir=trainer_config["logging_dir"],
+        output_dir=trainer_config["output_dir"],
+        eval_steps=trainer_config["eval_steps"],
+        max_steps=trainer_config["max_steps"],
+        report_to=trainer_config["report_to"],
+        data_seed=trainer_config["data_seed"],
+        run_name=trainer_config["run_name"],
+        optim=trainer_config["optim"],
+        seed=trainer_config["seed"],
     )
 
-    training_args = trainerargs.set_dataloader(pin_memory=False)
-
-    model.train()
+    trainerargs = trainerargs.set_dataloader(pin_memory=False)
     
-    trainer = SequentialTrainer(
-        data_collator=data_collator,
+    trainerargs.per_device_train_batch_size = trainer_config["per_device_train_batch_size"]
+    trainerargs.per_device_eval_batch_size = trainer_config["per_device_eval_batch_size"]
+
+    def compute_metrics(eval_preds):
+    
+        logits, true_labels = eval_preds
+        predictions = np.argmax(logits, axis=1)
+        
+        accuracy = accuracy_score(true_labels, predictions)
+
+        with open(os.path.join(logdir, "loss_log.csv"), "a", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow([
+                "N/A",
+                "N/A",
+                "N/A",
+                "N/A",
+                "N/A",
+                accuracy
+            ])
+
+        return {"accuracy": accuracy}
+    
+    trainer = Trainer(
+        callbacks=[SaveLossCallback(logdir)],
         compute_metrics=compute_metrics,
+        data_collator=data_collator,
         train_dataset=traindata,
         eval_dataset=evaldata,
+        tokenizer=tokenizer,
         args=trainerargs,
         model=model,
     )
 
-    trainer.train()
-    
+    metrics = trainer.train()[2]
+
+    print("Evaluating on test set")
+    res = trainer.evaluate(testdata)
+
+    metrics["test_accuracy"] = res["eval_accuracy"]
+
+    with open(os.path.join(logdir, "results.json"), "w") as f:
+        json.dump(metrics, f, indent=4)
+
     if os.path.isdir("./temp"):
         shutil.rmtree("./temp")
 
-    save_path = os.path.join(savedir, "norbert-seqcls-{}".format(datetime.datetime.now().strftime("%Y%m%d%H%M%S")))
+    save_path = os.path.join(savedir, "norbert-seqcls-{}".format(datetime.datetime.now().strftime("%Y%m%d_%H:%M")))
 
-    model.save_pretrained(save_path)
-    tokenizer.save_pretrained(save_path)
-
-    print(f"Model and tokenizer saved to : {save_path}")    
 
 
 if __name__ == "__main__":
@@ -151,97 +197,60 @@ if __name__ == "__main__":
     
     parser = argparse.ArgumentParser()
     parser.add_argument("--smoke", action='store_true', help="Run a small dataset for testing")
+    parser.add_argument("--config", type=str, help="path to model config", required=True)
     args = parser.parse_args()
 
     if torch.cuda.is_available():
         print("Device: {}".format(torch.cuda.get_device_name(0)))
         print("Memory Usage: {}/{}".format(round(torch.cuda.memory_allocated(0)/1024**3,1), round(torch.cuda.memory_reserved(0)/1024**3,1)))
 
-    classes=[
-        "BYA-87", #0
-        "BRA-69", #1
-        "TU", #2
-        "U", #3
-        "F", #4
-        "BGA", #5
-        "BFA", #6
-        "%-BYA-97", #7 
-        "T-BRA", #8
-        "%-TU", #9
-        "%-BYA", #10
-        "BYA", #11
-        "BRA", #12
-        "%-BRA", #13
-    ]
+    with open(args.config, "r") as f:
+        config = json.load(f)
 
-    include_idx = [10, 11, 12, 13]
-    include_classes = [classes[i] for i in include_idx]
+    model_config = config["model_config"]
+    trainer_config = config["trainer_config"]
 
-    id2label = {i+1: c for i, c in enumerate(include_classes)}
-    label2id = {c: i+1 for i, c in enumerate(include_classes)}
-
-    id2label[0] = "none"
-    label2id["none"] = 0
-    
     model = AutoModelForSequenceClassification.from_pretrained(
-            "ltg/norbert3-large", 
-            num_labels=len(label2id.keys()), 
-            id2label=id2label, 
-            label2id=label2id,
-            trust_remote_code=True,
+            pretrained_model_name_or_path=model_config["huggingface_model"],
+            id2label={v:k for k,v in model_config["label2id"].items()}, 
+            trust_remote_code=model_config["trust_remote_code"],
+            num_labels=len(model_config["label2id"]), 
+            label2id=model_config["label2id"],
         )
     
-    tokenizer = AutoTokenizer.from_pretrained("ltg/norbert3-large")
+    tokenizer = AutoTokenizer.from_pretrained(
+        pretrained_model_name_or_path=model_config["huggingface_model"],
+        )
 
     if args.smoke:
         train_path = "./formated_data/smoke/train_smoke.jsonl"
         eval_path = "./formated_data/smoke/eval_smoke.jsonl"
+        test_path = "./formated_data/smoke/eval_smoke.jsonl"
     
     else:
-        train_path = "./formated_data/huge/splits/train.jsonl"
-        eval_path = "./formated_data/huge/splits/eval.jsonl"
-        
-    with open(train_path, "r") as f:
-        train_raw = [json.loads(line) for line in f]
-
-    train_x = [inst["text"] for inst in train_raw]
-    train_y = [inst["label"] for inst in train_raw]
-
-    fixed_labels = []
-    for label in train_y:
-        if label == []:
-            fixed_labels.append("none")
-        elif isinstance(label, list):
-            fixed_labels.append(label[0])
-
-    train_y = [label2id[label] for label in fixed_labels]
+        train_path = config["train_path"]
+        eval_path = config["eval_path"]
+        test_path = config["test_path"]
     
+    train_x, train_y = load_and_format(train_path, label2id=model_config["label2id"])
+    eval_x, eval_y = load_and_format(eval_path, label2id=model_config["label2id"])
+    test_x, test_y = load_and_format(test_path, label2id=model_config["label2id"])
+
     tokenized_train_x = tokenizer(train_x, truncation=True, padding=False, max_length=512)
+    tokenized_eval_x = tokenizer(eval_x, truncation=True, padding=False, max_length=512)
+    tokenized_test_x = tokenizer(test_x, truncation=True, padding=False, max_length=512)
 
     train_dataset = CustomDataset(tokenized_train_x, train_y)
-
-    with open(eval_path, "r") as f:
-        eval_raw = [json.loads(line) for line in f]
-
-    eval_x = [inst["text"] for inst in eval_raw]
-    eval_y = [inst["label"] for inst in eval_raw]
-
-    fixed_labels = []
-    for label in eval_y:
-        if label == []:
-            fixed_labels.append("none")
-        elif isinstance(label, list):
-            fixed_labels.append(label[0])
-
-    eval_y = [label2id[label] for label in fixed_labels]
-    
-    tokenized_eval_x = tokenizer(eval_x, truncation=True, padding=False, max_length=512)
-
     eval_dataset = CustomDataset(tokenized_eval_x, eval_y)
-    
-    train(model, tokenizer, train_dataset, eval_dataset)
+    test_dataset = CustomDataset(tokenized_test_x, test_y)
 
-
-
+    train(
+        trainer_config=trainer_config,
+        traindata=train_dataset,
+        evaldata=eval_dataset,
+        testdata=test_dataset,
+        tokenizer=tokenizer,
+        model=model,
+    )
 
 

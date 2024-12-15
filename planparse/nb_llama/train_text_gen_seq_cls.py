@@ -15,6 +15,7 @@ from torch.utils.data import SequentialSampler, Dataset, DataLoader
 from transformers import Trainer, TrainingArguments, DataCollatorForLanguageModeling
 from transformers.trainer_callback import TrainerCallback
 from torch.nn.utils.rnn import pad_sequence
+from sklearn.metrics import accuracy_score
 from transformers import PretrainedConfig
 from peft import get_peft_model
 from torch import nn
@@ -29,27 +30,30 @@ from load_data import load_and_format
 
 class SaveLossCallback(TrainerCallback):
     def __init__(self, log_dir):
+        
         self.log_dir = log_dir
+        
         os.makedirs(log_dir, exist_ok=True)
-        self.log_file = os.path.join(
-            log_dir, 
-            f"loss_log.csv"
-        )
-        # Create the CSV file and write the header
+        
+        self.log_file = os.path.join(log_dir, "loss_log.csv")
+        
         with open(self.log_file, "w", newline="") as f:
             writer = csv.writer(f)
-            writer.writerow(["Step", "Loss", "Learning Rate", "Epoch", "Global Step"])
+            writer.writerow(["Step", "Loss", "Learning Rate", "Epoch", "Global Step", "eval_accuracy"])
 
     def on_log(self, args, state, control, logs=None, **kwargs):
+        
         if logs is not None and "loss" in logs:
+            
             with open(self.log_file, "a", newline="") as f:
                 writer = csv.writer(f)
                 writer.writerow([
-                    state.global_step,        # Step
-                    logs.get("loss", "N/A"),  # Loss
-                    logs.get("learning_rate", "N/A"),  # Learning rate
-                    state.epoch,             # Current epoch
-                    state.global_step        # Global step
+                    state.global_step,       
+                    logs.get("loss", "N/A"),  
+                    logs.get("learning_rate", "N/A"), 
+                    state.epoch,             
+                    state.global_step,
+                    "N/A"
                 ])
 
 
@@ -72,20 +76,6 @@ def data_collator(batch_input):
         new_batch_input["labels"] = labels.to(device)
 
     return new_batch_input
-
-
-def compute_metrics(eval_preds):
-    
-    metric = evaluate.load("accuracy")
-    logits, true_labels = eval_preds
-
-    predictions = np.argmax(logits, axis=1)
-    
-    output = {
-        "accuracy": metric.compute(predictions=predictions, references=true_labels)['accuracy'],
-    }
-    
-    return output
 
 
 class CustomDataset(Dataset):
@@ -127,7 +117,7 @@ def train(
     config = config["trainer_config"]
 
     savedir = "./local_models_storage/"
-    logdir = os.path.join(config["logging_dir"], config["run_name"] + "_" + datetime.datetime.now().strftime('%Y%m%d%H%M%S'))
+    logdir = os.path.join(config["logging_dir"], config["run_name"] + "_" + datetime.datetime.now().strftime('%Y%m%d_%H:%M'))
 
     print(f"logs and results will be saved to : {logdir}")
     
@@ -162,6 +152,26 @@ def train(
     trainerargs.per_device_train_batch_size = config["per_device_train_batch_size"]
     trainerargs.per_device_eval_batch_size = config["per_device_eval_batch_size"]
 
+    def compute_metrics(eval_preds):
+    
+        logits, true_labels = eval_preds
+        predictions = np.argmax(logits, axis=1)
+        
+        accuracy = accuracy_score(true_labels, predictions)
+
+        with open(os.path.join(logdir, "loss_log.csv"), "a", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow([
+                "N/A",
+                "N/A",
+                "N/A",
+                "N/A",
+                "N/A",
+                accuracy
+            ])
+
+        return {"accuracy": accuracy}
+    
     trainer = Trainer(
         callbacks=[SaveLossCallback(logdir)],
         compute_metrics=compute_metrics,
@@ -181,12 +191,12 @@ def train(
     metrics["test_accuracy"] = res["eval_accuracy"]
 
     with open(os.path.join(logdir, "results.json"), "w") as f:
-        json.dump(metrics, f)
+        json.dump(metrics, f, indent=4)
 
     if os.path.isdir("./temp"):
         shutil.rmtree("./temp")
 
-    save_path = os.path.join(savedir, "norbert-seqcls-{}".format(datetime.datetime.now().strftime("%Y%m%d%H%M%S")))
+    save_path = os.path.join(savedir, "norbert-seqcls-{}".format(datetime.datetime.now().strftime("%Y%m%d_%H:%M")))
     
 
 

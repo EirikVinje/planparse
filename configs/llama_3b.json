@@ -1,5 +1,5 @@
 {
-    "config_name": "llama_1b",
+    "config_name": "llama_3b",
     "template_path": "./prompt_templates/llama/llama_1b_v1.jinja",
     "train_path": "./formated_data/huge/splits/train.jsonl",
     "eval_path": "./formated_data/huge/splits/eval.jsonl",
@@ -7,7 +7,7 @@
     
     "model_config": {
         "access_token": null,
-        "huggingface_model": "NbAiLab/nb-llama-3.2-1B-Instruct",
+        "huggingface_model": "NbAiLab/nb-llama-3.2-3B-Instruct",
         "torch_dtype": "float32",
         "load_in_4bit": false,
         "load_in_8bit": true,
@@ -18,7 +18,7 @@
     },
 
     "trainer_config": {
-        "run_name": "NbAiLab_nb-llama-3_2-1B-Instruct",
+        "run_name": "NbAiLab_nb-llama-3_2-3B-Instruct",
         "logging_dir" : "./training_logs",
         "per_device_train_batch_size": 4,
         "per_device_eval_batch_size": 4,
