@@ -1,6 +1,7 @@
 from typing import Dict
 import argparse 
 import shutil
+import logging
 import datetime
 import json
 import csv
@@ -20,6 +21,12 @@ import torch
 
 from load_data import load_and_format
 
+logger = logging.getLogger("planparse")
+console_handler = logging.StreamHandler()
+formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+console_handler.setFormatter(formatter)
+logger.setLevel(logging.DEBUG)
+logger.addHandler(console_handler)
 
 class SaveLossCallback(TrainerCallback):
     def __init__(self, log_dir):
@@ -95,20 +102,20 @@ class CustomDataset(Dataset):
         return self.encodings[idx]
 
 
-
 def train(
         model : AutoModelForSequenceClassification,
         tokenizer : AutoTokenizer,
         traindata : CustomDataset,
         evaldata : CustomDataset,
         testdata : CustomDataset,
+        testdata2 : CustomDataset,
         trainer_config : Dict,
         ):
 
     savedir = "./local_models_storage/"
     logdir = os.path.join(trainer_config["logging_dir"], trainer_config["run_name"] + "_" + datetime.datetime.now().strftime('%Y%m%d_%H:%M'))
 
-    print(f"logs and results will be saved to : {logdir}")
+    logger.info("Training logs and results will be saved to : {}".format(logdir))
     
     if os.path.isdir("./temp"):
         shutil.rmtree("./temp")
@@ -166,22 +173,28 @@ def train(
         callbacks=[SaveLossCallback(logdir)],
         compute_metrics=compute_metrics,
         data_collator=data_collator,
+        processing_class=tokenizer,
         train_dataset=traindata,
         eval_dataset=evaldata,
-        tokenizer=tokenizer,
         args=trainerargs,
         model=model,
     )
 
+    logger.info("training start..")
+
     metrics = trainer.train()[2]
 
-    print("Evaluating on test set")
+    print("Evaluating on 2 test sets")
     res = trainer.evaluate(testdata)
-
     metrics["test_accuracy"] = res["eval_accuracy"]
+    
+    res2 = trainer.evaluate(testdata2)
+    metrics["test_accuracy2"] = res2["eval_accuracy"]
 
     with open(os.path.join(logdir, "results.json"), "w") as f:
         json.dump(metrics, f, indent=4)
+
+    logger.info("Training logs and results saved to : {}".format(os.path.join(logdir, "results.json")))
 
     if os.path.isdir("./temp"):
         shutil.rmtree("./temp")
@@ -222,33 +235,46 @@ if __name__ == "__main__":
         pretrained_model_name_or_path=model_config["huggingface_model"],
         )
 
+    logger.info("loaded model and tokenizer from : {}".format(model_config["huggingface_model"]))
+
     if args.smoke:
+        logger.info("using smoke dataset")
         train_path = "./formated_data/smoke/train_smoke.jsonl"
         eval_path = "./formated_data/smoke/eval_smoke.jsonl"
         test_path = "./formated_data/smoke/eval_smoke.jsonl"
+         
     
     else:
         train_path = config["train_path"]
         eval_path = config["eval_path"]
         test_path = config["test_path"]
+        test_path2 = "./formated_data/huge/augmented_generated_with_edge_cases.jsonl"
+        logger.info("loaded train from : {}".format(config["train_path"]))
+        logger.info("loaded eval from : {}".format(config["eval_path"]))
+        logger.info("loaded test from : {}".format(config["test_path"]))
+        logger.info("loaded test2 from : {}".format(test_path2))
     
     train_x, train_y = load_and_format(train_path, label2id=model_config["label2id"])
     eval_x, eval_y = load_and_format(eval_path, label2id=model_config["label2id"])
     test_x, test_y = load_and_format(test_path, label2id=model_config["label2id"])
+    test_x2, test_y2 = load_and_format(test_path2, label2id=model_config["label2id"])
 
     tokenized_train_x = tokenizer(train_x, truncation=True, padding=False, max_length=512)
     tokenized_eval_x = tokenizer(eval_x, truncation=True, padding=False, max_length=512)
     tokenized_test_x = tokenizer(test_x, truncation=True, padding=False, max_length=512)
+    tokenized_test_x2 = tokenizer(test_x2, truncation=True, padding=False, max_length=512)
 
     train_dataset = CustomDataset(tokenized_train_x, train_y)
     eval_dataset = CustomDataset(tokenized_eval_x, eval_y)
     test_dataset = CustomDataset(tokenized_test_x, test_y)
+    test_dataset2 = CustomDataset(tokenized_test_x2, test_y2)
 
     train(
         trainer_config=trainer_config,
         traindata=train_dataset,
         evaldata=eval_dataset,
         testdata=test_dataset,
+        testdata2=test_dataset2,
         tokenizer=tokenizer,
         model=model,
     )

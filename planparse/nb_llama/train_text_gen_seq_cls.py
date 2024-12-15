@@ -1,7 +1,9 @@
 """
 Implement a class for sequence classification. E.g to ltg/norbert3-large (https://huggingface.co/ltg/norbert3-large)
 """
+from pprint import pprint
 from typing import Dict
+import logging
 import argparse 
 import shutil
 import datetime
@@ -9,10 +11,8 @@ import json
 import csv
 import os
 
-from pprint import pprint
-
-from torch.utils.data import SequentialSampler, Dataset, DataLoader
 from transformers import Trainer, TrainingArguments, DataCollatorForLanguageModeling
+from torch.utils.data import SequentialSampler, Dataset, DataLoader
 from transformers.trainer_callback import TrainerCallback
 from torch.nn.utils.rnn import pad_sequence
 from sklearn.metrics import accuracy_score
@@ -27,8 +27,16 @@ from llm_base_text_gen_seq_cls import CausalTextClSModel
 from planparse.prompter import Prompter
 from load_data import load_and_format
 
+logger = logging.getLogger("planparse")
+console_handler = logging.StreamHandler()
+formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+console_handler.setFormatter(formatter)
+logger.setLevel(logging.DEBUG)
+logger.addHandler(console_handler)
+
 
 class SaveLossCallback(TrainerCallback):
+    
     def __init__(self, log_dir):
         
         self.log_dir = log_dir
@@ -175,8 +183,8 @@ def train(
     trainer = Trainer(
         callbacks=[SaveLossCallback(logdir)],
         compute_metrics=compute_metrics,
+        processing_class=model.tokenizer,
         data_collator=data_collator,
-        tokenizer=model.tokenizer,
         train_dataset=traindata,
         eval_dataset=evaldata,
         args=trainerargs,
@@ -244,9 +252,9 @@ if __name__ == "__main__":
 
     model = CausalTextClSModel(config=config, n_labels=len(label2id))
     
-    train_x, train_y = load_and_format(train_path, prompter, label2id=label2id)
-    eval_x, eval_y = load_and_format(eval_path, prompter, label2id=label2id)
-    test_x, test_y = load_and_format(test_path, prompter, label2id=label2id)
+    train_x, train_y = load_and_format(train_path, prompt_generator=prompter, label2id=label2id)
+    eval_x, eval_y = load_and_format(eval_path, prompt_generator=prompter, label2id=label2id)
+    test_x, test_y = load_and_format(test_path, prompt_generator=prompter, label2id=label2id)
 
     # print("train labels: ", np.unique(train_y, return_counts=True))
     # print("eval labels: ", np.unique(eval_y, return_counts=True))
