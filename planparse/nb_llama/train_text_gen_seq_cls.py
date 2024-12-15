@@ -16,11 +16,7 @@ from torch.utils.data import SequentialSampler, Dataset, DataLoader
 from transformers.trainer_callback import TrainerCallback
 from torch.nn.utils.rnn import pad_sequence
 from sklearn.metrics import accuracy_score
-from transformers import PretrainedConfig
-from peft import get_peft_model
-from torch import nn
 import numpy as np
-import evaluate
 import torch
 
 from llm_base_text_gen_seq_cls import CausalTextClSModel
@@ -119,9 +115,6 @@ def train(
         config : Dict
         ):
 
-    model.to_device()
-    model.train()
-
     config = config["trainer_config"]
 
     savedir = "./local_models_storage/"
@@ -206,14 +199,6 @@ def train(
         shutil.rmtree("./temp")
 
     save_path = os.path.join(savedir, "norbert-seqcls-{}".format(datetime.datetime.now().strftime("%Y%m%d_%H:%M")))
-    
-
-
-
-    # trainer.save_model(save_path)
-    
-    # print(f"Model and tokenizer saved to : {save_path}")    
-
 
 
 

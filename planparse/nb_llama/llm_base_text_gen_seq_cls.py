@@ -1,18 +1,29 @@
 from typing import List, Dict, Any
+import logging
 import json
 import os
 
 from transformers import PreTrainedModel, PretrainedConfig, AutoModel, AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 from transformers.modeling_outputs import SequenceClassifierOutput
 from transformers import Trainer, TrainingArguments
-from peft import LoraConfig, get_peft_model
 from torch.utils.data import Dataset
 from huggingface_hub import login
+import bitsandbytes as bnb
 import torch.nn as nn
 import numpy as np
 import torch
 
 
+logger = logging.getLogger("planparse")
+
+if __name__ == "__main__":
+
+    console_handler = logging.StreamHandler()
+    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    console_handler.setFormatter(formatter)
+    logger.setLevel(logging.DEBUG)
+    logger.addHandler(console_handler)
 
 
 class CustomDataset(Dataset):
@@ -79,17 +90,30 @@ class CausalTextClSModel(nn.Module):
 
         self.tokenizer.add_special_tokens({'pad_token': "[PAD]"})
         
-        # quantization_config = BitsAndBytesConfig(
-        #         load_in_4bit=load_in_4bit,
-        #         load_in_8bit=load_in_8bit,
-        #     )
+        if load_in_4bit or load_in_8bit:
+
+            quantization_config = BitsAndBytesConfig(
+                    load_in_4bit=load_in_4bit,
+                    load_in_8bit=load_in_8bit,
+                )
+            
+            if load_in_4bit:
+                logger.info(f"Loading model in 4-bit mode")
+            elif load_in_8bit:
+                logger.info(f"Loading model in 8-bit mode")
+
+        else:
+            quantization_config = None
 
         self.backend = AutoModelForCausalLM.from_pretrained(
+            low_cpu_mem_usage=True if load_in_4bit or load_in_8bit else False,
             pretrained_model_name_or_path=huggingface_model,
-            # quantization_config=quantization_config,
-            low_cpu_mem_usage=True,
+            quantization_config=quantization_config,
         )
         
+        if load_in_4bit or load_in_8bit:
+            self.backend = prepare_model_for_kbit_training(self.backend)
+
         self.backend.config.output_hidden_states = True
         self.backend.config.tie_word_embeddings = False
 
@@ -105,14 +129,25 @@ class CausalTextClSModel(nn.Module):
             )
 
         self.peftmodel = get_peft_model(self.backend, self.lora_config)
+        logger.info(f"Model wrapped with peft")
 
-        self.classifier_head = nn.Linear(self.backend.config.hidden_size, self.n_labels)
+        if load_in_4bit:
+            self.classifier_head = bnb.nn.Linear4bit(self.backend.config.hidden_size, self.n_labels)
+            logger.info(f"Initialized 4-bit classifier head with {self.n_labels} classes")
 
+        elif load_in_8bit:
+            self.classifier_head = bnb.nn.Linear8bitLt(self.backend.config.hidden_size, self.n_labels)
+            logger.info(f"Initialized 8-bit classifier head with {self.n_labels} classes")
+
+        else:
+            self.classifier_head = nn.Linear(self.backend.config.hidden_size, self.n_labels)
+            logger.info(f"Initialized classifier head with {self.n_labels} classes")
+        
         # self.classifier_head.weight.data = self.classifier_head.weight.data.to(torch.float16)
         # self.classifier_head.bias.data = self.classifier_head.bias.data.to(torch.float16)
-
-        print(f"Initialized classifier head with {self.n_labels} labels")
-
+        
+        logger.info(f"Backend dtype: {self.backend.dtype}")
+        logger.info(f"classifier dtype: ({self.classifier_head.weight.dtype}, {self.classifier_head.bias.dtype})")
             
 
     def forward(self, input_ids=None, attention_mask=None, labels=None):
@@ -138,15 +173,6 @@ class CausalTextClSModel(nn.Module):
         return output
     
 
-    def to_device(self, device=None):
-        
-        if device is None:
-            device = self.device
-
-        self.backend.to(device)
-        self.classifier_head.to(device)
-
-
     def train(self):
 
         self.backend.train()
@@ -161,13 +187,13 @@ class CausalTextClSModel(nn.Module):
 
 if __name__ == "__main__":
 
-    with open("configs/llama_1b.json", "r") as f:
+    with open("configs/norwai_mistral_7b.json", "r") as f:
         config = json.load(f)
 
     model = CausalTextClSModel(config, n_labels=2)
 
     train_x = [
-        "Prosent",
+        "En setning som omhandler utnyttingsgrad.",
         ]
     
     train_y = [0]
@@ -182,7 +208,7 @@ if __name__ == "__main__":
         eval_dataset=train_dataset,
         
         args=TrainingArguments(
-            output_dir="./results",
+            output_dir="./temp",
             save_strategy="no",
             num_train_epochs=1,
             per_device_train_batch_size=1,
@@ -192,6 +218,7 @@ if __name__ == "__main__":
             logging_steps=1,
             warmup_steps=0,
             weight_decay=0.01,
+            report_to="none",
             eval_steps=1,
         ),
     )
