@@ -1,11 +1,11 @@
 {
-    "config_name": "nb_bert_large",
+    "config_name": "nb_bert_base",
     "train_path": "./formated_data/huge/splits/train.jsonl",
     "eval_path": "./formated_data/huge/splits/eval.jsonl",
     "test_path": "./formated_data/huge/splits/test.jsonl",
     
     "model_config": {
-        "huggingface_model": "NbAiLab/nb-bert-large",
+        "huggingface_model": "NbAiLab/nb-bert-base",
         "trust_remote_code": true,
         "device": "cuda",
         "label2id": {
@@ -18,7 +18,7 @@
     },
 
     "trainer_config": {
-        "run_name": "NbAiLab_nb-bert-large",
+        "run_name": "NbAiLab_nb-bert-base",
         "logging_dir" : "./training_logs",
         "per_device_train_batch_size": 4,
         "gradient_accumulation_steps": 4,
