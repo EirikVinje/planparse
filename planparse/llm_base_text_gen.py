@@ -29,11 +29,11 @@ class LLMBaseTextGen:
             with open(self.model_config["access_token"], "r") as f:
                 self.access_token = f.read().strip()
 
-        login(token=self.access_token)
+            login(token=self.access_token)
 
         self.local_path = local_path
 
-
+        
     def save(self, path : str):
         self.model.save_pretrained(path)
         self.tokenizer.save_pretrained(path)
@@ -64,7 +64,8 @@ class LLMBaseTextGen:
                 self.model_config["huggingface_model"], 
                 padding_side="left",
             )
-
+            self.tokenizer.add_special_tokens({'pad_token': "[PAD]"})
+        
             assert not self.model_config["load_in_4bit"] or not self.model_config["load_in_8bit"], "Must load model in 4-bit or 8-bit. Not both."
 
             quantization_config = BitsAndBytesConfig(
@@ -114,12 +115,23 @@ class LLMBaseTextGen:
 
         for doc in tqdm(prompts, desc="generating outputs", disable=False):
 
-            inputs = self.tokenizer(
-                return_tensors="pt", 
-                padding="longest", 
-                truncation=True,
-                text=[doc],
-                )
+            try:
+                if self.generation_config["return_token_type_ids"] == False:
+                    inputs = self.tokenizer(
+                        return_tensors="pt", 
+                        padding="longest", 
+                        truncation=True,
+                        text=[doc],
+                        return_token_type_ids=False
+                        )
+            except:
+                inputs = self.tokenizer(
+                    return_tensors="pt", 
+                    padding="longest", 
+                    truncation=True,
+                    text=[doc],
+                    )
+            
             print(inputs["input_ids"].size(1)+max_new_tokens)
 
             if "cuda" in str(self.model.device):
@@ -129,7 +141,8 @@ class LLMBaseTextGen:
                 
                 outputs = self.model.generate(
                     **inputs, 
-                    max_length=inputs["input_ids"].size(1) + max_new_tokens,
+                    #max_length=inputs["input_ids"].size(1) + max_new_tokens,
+                    max_new_tokens=max_new_tokens,
                     pad_token_id=self.tokenizer.pad_token_id,
                     eos_token_id=self.tokenizer.eos_token_id,
                     do_sample=self.generation_config["do_sample"],
