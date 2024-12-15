@@ -10,7 +10,7 @@
         "huggingface_model": "NbAiLab/nb-llama-3.2-1B-Instruct",
         "torch_dtype": "float32",
         "load_in_4bit": false,
-        "load_in_8bit": true,
+        "load_in_8bit": false,
         "lora_dropout": 0.1,
         "lora_alpha": 16,
         "device": "cuda",

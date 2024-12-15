@@ -20,8 +20,8 @@
     "trainer_config": {
         "run_name": "NbAiLab_nb-llama-3_2-3B-Instruct",
         "logging_dir" : "./training_logs",
-        "per_device_train_batch_size": 2,
-        "per_device_eval_batch_size": 2,
+        "per_device_train_batch_size": 4,
+        "per_device_eval_batch_size": 4,
         "gradient_accumulation_steps": 4,
         "torch_empty_cache_steps": true,
         "lr_scheduler_type": "linear",
