@@ -147,6 +147,7 @@ def train(
         weight_decay=config["weight_decay"],
         logging_dir=config["logging_dir"],
         output_dir=config["output_dir"],
+        eval_steps=config["eval_steps"],
         max_steps=config["max_steps"],
         report_to=config["report_to"],
         data_seed=config["data_seed"],
