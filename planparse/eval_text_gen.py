@@ -34,8 +34,9 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=str, default="./configs/mistral7b.json", help="Path to config file")
-    parser.add_argument("--docs", type=str, default='data/1719/1719.txt', help='Path to data file(s)')
-    parser.add_argument("--local_path", type=str, default='local_models/NorwAI/NorwAI-Mistral-7B-instruct-20241203104742')
+    parser.add_argument("--prompt", type=str, default=None, help="path to prompt template")
+    parser.add_argument("--docs", type=str, default='data/245/245.txt', help='Path to data file(s)')
+    parser.add_argument("--local_path", type=str, default=None)
     args = parser.parse_args()
     
     '''data = [
@@ -52,12 +53,12 @@ if __name__ == "__main__":
         filepath = filepath.strip(' ')
         file = open(filepath,'r')
         content = file.read()
-        content = preprocess_text(content)
+        #content = preprocess_text(content)
         data.append(content)
         file.close()
     #print(data)
 
-    data = ["Det tillates maksimal % BYA på 50 %. Side 2 av 8 Det kreves et minste uteoppholdsareal MUA pr. boligenhet på 50 m2. Bebyggelsen skal ha saltak med vinkel mellom 18 og 38 grader. Det tillates påbygg i form av ark/oppløft, der påbyggets bredde kan være maksimalt  1/3-del av takets lengde. B2: I byggeområde B 2 tillates oppført tofamilie-/trefamilie-/firefamiliehus i maksimalt to  etasjer, med mønehøyde maksimalt 10,0 m over planert terreng og med mulighet for  beboelse på innredet loft, og med tilhørende anlegg som garasjer og separate boder.  Garasjer og boder skal tilpasses bolighusets form, takvinkel og materialbruk, de skal  kun ha en etasje og maksimal mønehøyde på 5,5 m og kan oppføres utenfor  byggegrense med avstand minst 2,0 m til nabogrense mot kommunal vei dersom  utkjøring fra garasje skjer parallelt med vei. Skjer utkjøring direkte mot kommunal vei  skal avstanden til nabogrense mot vei være minst 5,0 m. Byggegrense mot gang-/sykkelvei langs FV 304 er 15 m fra midtlinje av gang-  sykkelvei. Det tillates maksimal % BYA på 50 %. Byggeområde for industri 11 I byggeområde I 1 ligger Kvelde mølle med tilhørende lagerbebyggelse og tekniske  installasjoner. Maksimalt tillatt % BYA er på 50 %."]
+    #data = ["Det tillates maksimal % BYA på 50 %. Side 2 av 8 Det kreves et minste uteoppholdsareal MUA pr. boligenhet på 50 m2. Bebyggelsen skal ha saltak med vinkel mellom 18 og 38 grader. Det tillates påbygg i form av ark/oppløft, der påbyggets bredde kan være maksimalt  1/3-del av takets lengde. B2: I byggeområde B 2 tillates oppført tofamilie-/trefamilie-/firefamiliehus i maksimalt to  etasjer, med mønehøyde maksimalt 10,0 m over planert terreng og med mulighet for  beboelse på innredet loft, og med tilhørende anlegg som garasjer og separate boder.  Garasjer og boder skal tilpasses bolighusets form, takvinkel og materialbruk, de skal  kun ha en etasje og maksimal mønehøyde på 5,5 m og kan oppføres utenfor  byggegrense med avstand minst 2,0 m til nabogrense mot kommunal vei dersom  utkjøring fra garasje skjer parallelt med vei. Skjer utkjøring direkte mot kommunal vei  skal avstanden til nabogrense mot vei være minst 5,0 m. Byggegrense mot gang-/sykkelvei langs FV 304 er 15 m fra midtlinje av gang-  sykkelvei. Det tillates maksimal % BYA på 50 %. Byggeområde for industri 11 I byggeområde I 1 ligger Kvelde mølle med tilhørende lagerbebyggelse og tekniske  installasjoner. Maksimalt tillatt % BYA er på 50 %."]
 
     
     if args.config is not None:
@@ -74,14 +75,16 @@ if __name__ == "__main__":
     llm = LLMBaseTextGen(config, args.local_path)
     llm.load_model()
     logger.info("loaded model : {}".format(config["model_config"]["huggingface_model"]))
-    
-    config["template_path"] = "./prompt_templates/mistral_7b_test_v5.jinja"
-    config["generation_config"]["max_new_tokens"] = 300
+
+    if args.prompt:
+        config["template_path"] = args.prompt
+    #config["generation_config"]["max_new_tokens"] = 300
     prompter = Prompter(config["template_path"])
     prompter.load()
     logger.info("loaded promp template from : {}".format(config["template_path"]))
 
-    documents = [prompter(doc, None) for doc in data]
+    #documents = [prompter(doc, None) for doc in data]
+    documents = [prompter(doc) for doc in data]
     print(documents[0])
     logger.info("prompts generated...")
 

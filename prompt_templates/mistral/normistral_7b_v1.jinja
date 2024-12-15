@@ -1,0 +1,25 @@
+<|im_start|> user
+Identifiser referanser til "utnyttingsgrad" i teksten nedenfor. "Utnyttingsgrad" refererer til graden av tillatt utnyttelse av et område, ofte brukt i byggeforskrifter. Din oppgave er å identifisere hvilke type utnyttingsgrad som finnes i teksten.
+Utnyttingsgrad kan enten nevnes med en gammel betegnelse, da sier du bare at det er en gammel utnyttingsgrad som brukes. Men dersom en av disse fire er i teksten skal du nevne hvilke: Bebygd areal i kvadratmeter betegnes med BYA, bebygd areal i prosent betegnes med %-BYA, bruksareal i kvadratmeter betegnes med BRA, prosent bruksareal betegnes med %-BRA.
+Et eksempel kan være at jeg gir deg en tekst, og du svarer om det er utnyttingsgrad i teksten, analysér følgende tekst: I område B1 tillates et totalt bruksareal BRA på 40 m2.<|im_end|>
+<|im_start|> assistant
+Denne teksten inneholder bruksareal i kvadratmeter, BRA.<|im_end|>
+<|im_start|> user
+Hvis det ikke finnes referanser til utnyttingsgrad i teksten, returner du at du ikke finner noen utnyttingsgrad, analysér følgende tekst: I strandområdet ved byen skal det ikke bygges nye leiligheter.<|im_end|>
+<|im_start|> assistant
+Teksten du ga meg inneholder ikke utnyttingsgrad.
+<|im_start|> user
+Analysér følgende tekst: Lovlig bebygd areal BYA er 160%.
+<|im_start|> assistant
+Denne teksten inneholder bebygd areal i prosent, %-BYA.
+<|im_start|> user
+Analysér følgende tekst: Her er det ikke lov med mer enn BYA på 200 kvadratmeter.
+<|im_start|> assistant
+Denne teksten inneholder bebygd areal i kvadratmeter, BYA.
+<|im_start|> user
+Analysér følgende tekst: Inntil 30% av bruksarealet i den enkelte boenhet i 1. eller 2. etasje tillates benyttet til  kontor, utstilling, galleri, utsalg og lignende som ledd i egen virksomhet.
+<|im_start|> assistant
+Denne teksten inneholder bruksareal i prosent, %-BRA.
+<|im_start|> user
+Analysér følgende tekst: {{ text }}
+<|im_start|> assistant
