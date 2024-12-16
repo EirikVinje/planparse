@@ -112,6 +112,7 @@ def train(
         traindata : CustomDataset,
         evaldata : CustomDataset,
         testdata : CustomDataset,
+        testdata2 : CustomDataset,
         config : Dict
         ):
 
@@ -189,8 +190,10 @@ def train(
 
     print("Evaluating on test set")
     res = trainer.evaluate(testdata)
-
     metrics["test_accuracy"] = res["eval_accuracy"]
+
+    res2 = trainer.evaluate(testdata2)
+    metrics["test_accuracy2"] = res2["eval_accuracy"]
 
     with open(os.path.join(logdir, "results.json"), "w") as f:
         json.dump(metrics, f, indent=4)
@@ -228,6 +231,7 @@ if __name__ == "__main__":
         train_path = config["train_path"]
         eval_path = config["eval_path"]
         test_path = config["test_path"]
+        test_path2 = "./formated_data/huge/augmented_generated_with_edge_cases.jsonl"
 
     label2id = config["label2id"]
     
@@ -241,6 +245,7 @@ if __name__ == "__main__":
     train_x, train_y = load_and_format(train_path, prompt_generator=prompter, label2id=label2id)
     eval_x, eval_y = load_and_format(eval_path, prompt_generator=prompter, label2id=label2id)
     test_x, test_y = load_and_format(test_path, prompt_generator=prompter, label2id=label2id)
+    test_x2, test_y2 = load_and_format(test_path2, prompt_generator=prompter, label2id=label2id)
 
     # print("train labels: ", np.unique(train_y, return_counts=True))
     # print("eval labels: ", np.unique(eval_y, return_counts=True))
@@ -249,13 +254,21 @@ if __name__ == "__main__":
     tokenized_train_x = model.tokenizer(train_x, truncation=True, padding=False)
     tokenized_eval_x = model.tokenizer(eval_x, truncation=True, padding=False)
     tokenized_test_x = model.tokenizer(test_x, truncation=True, padding=False)
+    tokenized_test_x2 = model.tokenizer(test_x2, truncation=True, padding=False)
 
     train_dataset = CustomDataset(tokenized_train_x, train_y)
     eval_dataset = CustomDataset(tokenized_eval_x, eval_y)
     test_dataset = CustomDataset(tokenized_test_x, test_y)
-
-    train(model, train_dataset, eval_dataset, test_dataset, config)
+    test_dataset2 = CustomDataset(tokenized_test_x2, test_y2)
     
+    train(
+            config=config,
+            traindata=train_dataset,
+            evaldata=eval_dataset,
+            testdata=test_dataset,
+            testdata2=test_dataset2,
+            model=model,
+        )
 
 
 

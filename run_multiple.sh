@@ -9,4 +9,4 @@
 
 python planparse/nb_llama/train_text_gen_seq_cls.py --config configs/nb_llama_1b.json
 python planparse/nb_llama/train_text_gen_seq_cls.py --config configs/nb_llama_3b.json
-# python planparse/nb_llama/train_text_gen_seq_cls.py --config configs/norwai_mistral_7b.json
+python planparse/nb_llama/train_text_gen_seq_cls.py --config configs/norwai_mistral_7b.json
