@@ -1,4 +1,5 @@
 import os
+import re
 import shutil
 import argparse
 import pdf2image
@@ -17,7 +18,21 @@ def read_pdf(pdf_path):
             ocr_dict = pytesseract.image_to_data(image, lang='nor', output_type=Output.DICT)
             text = " ".join(ocr_dict['text'])
             full_text += " " + text
-        return full_text.strip()
+        
+        # Remove special signs except "=" and "%"
+        full_text = re.sub(r"[^\w\s=%.]", " ", full_text)
+
+        # Remove single characters that are not "=" or "%"
+        full_text = re.sub(r"\b(?![=%])\w\b", "", full_text)
+        #full_text = re.sub(r"(?<!\w)\.(?!\w)", "", full_text)
+        full_text = full_text.replace("m*", "m2") 
+        full_text = full_text.replace("m?", "m2") 
+
+        # Remove extra white spaces
+        full_text = re.sub(r"\s+", " ", full_text).strip()
+
+        return full_text
+    
     except TesseractError as e:
         print(f"OCR failed: {e}")
         return ""
