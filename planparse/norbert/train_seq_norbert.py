@@ -8,12 +8,12 @@ import csv
 import os
 
 from transformers import AutoModelForMaskedLM, AutoTokenizer, AutoModelForSequenceClassification
+from sklearn.metrics import accuracy_score, precision_score
 from sklearn.model_selection import train_test_split
 from transformers import Trainer, TrainingArguments
 from torch.utils.data import DataLoader, Dataset
 from torch.utils.data import SequentialSampler
 from torch.nn.utils.rnn import pad_sequence
-from sklearn.metrics import accuracy_score
 from transformers import TrainerCallback
 from torch import nn
 import numpy as np
@@ -39,7 +39,7 @@ class SaveLossCallback(TrainerCallback):
         
         with open(self.log_file, "w", newline="") as f:
             writer = csv.writer(f)
-            writer.writerow(["Step", "Loss", "Learning Rate", "Epoch", "Global Step", "eval_accuracy"])
+            writer.writerow(["Step", "Loss", "Learning Rate", "Epoch", "Global Step", "accuracy", "mean_precision"])
 
     def on_log(self, args, state, control, logs=None, **kwargs):
         
@@ -53,7 +53,8 @@ class SaveLossCallback(TrainerCallback):
                     logs.get("learning_rate", "N/A"), 
                     state.epoch,             
                     state.global_step,
-                    "N/A"
+                    "N/A",
+                    "N/A",
                 ])
 
 
@@ -155,6 +156,7 @@ def train(
         predictions = np.argmax(logits, axis=1)
         
         accuracy = accuracy_score(true_labels, predictions)
+        precision = precision_score(true_labels, predictions, average="macro")
 
         with open(os.path.join(logdir, "loss_log.csv"), "a", newline="") as f:
             writer = csv.writer(f)
@@ -164,7 +166,8 @@ def train(
                 "N/A",
                 "N/A",
                 "N/A",
-                accuracy
+                accuracy,
+                precision
             ])
 
         return {"accuracy": accuracy}
@@ -186,10 +189,12 @@ def train(
 
     print("Evaluating on 2 test sets")
     res = trainer.evaluate(testdata)
-    metrics["test_accuracy"] = res["eval_accuracy"]
+    metrics["test_accuracy"] = res["accuracy"]
+    metrics["test_mean_precision"] = res["mean_precision"]
     
     res2 = trainer.evaluate(testdata2)
-    metrics["test_accuracy2"] = res2["eval_accuracy"]
+    metrics["test_accuracy2"] = res2["accuracy"]
+    metrics["test_mean_precision2"] = res2["mean_precision"]
 
     with open(os.path.join(logdir, "results.json"), "w") as f:
         json.dump(metrics, f, indent=4)

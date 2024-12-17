@@ -1,6 +1,6 @@
 {
     "config_name": "llama_1b",
-    "template_path": "./prompt_templates/llama/llama_1b_v1.jinja",
+    "template_path": "./prompt_templates/llama/llama_v1.jinja",
     "train_path": "./formated_data/huge/splits/train.jsonl",
     "eval_path": "./formated_data/huge/splits/eval.jsonl",
     "test_path": "./formated_data/huge/splits/test.jsonl",
@@ -19,7 +19,7 @@
 
     "trainer_config": {
         "run_name": "NbAiLab_nb-llama-3_2-1B-Instruct",
-        "logging_dir" : "./training_logs",
+        "logging_dir" : "./logging",
         "per_device_train_batch_size": 4,
         "per_device_eval_batch_size": 4,
         "gradient_accumulation_steps": 4,
@@ -42,11 +42,6 @@
         "seed": 42
     },
     
-    "generation_config": {
-        "max_new_tokens": 30,
-        "do_sample": false
-    },
-
     "label2id": {
         "none" : 0,
         "%-BYA" : 1,

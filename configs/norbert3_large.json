@@ -19,7 +19,7 @@
 
     "trainer_config": {
         "run_name": "ltg_norbert3-large",
-        "logging_dir" : "./training_logs",
+        "logging_dir" : "./logging",
         "per_device_train_batch_size": 4,
         "gradient_accumulation_steps": 4,
         "torch_empty_cache_steps": true,

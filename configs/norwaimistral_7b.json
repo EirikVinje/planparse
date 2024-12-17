@@ -1,13 +1,13 @@
 {
-    "config_name": "normistral7b",
-    "template_path": "./prompt_templates/mistral/normistral_7b_v1.jinja",
+    "config_name": "norwaimistral_7b",
+    "template_path": "./prompt_templates/classification/mistral_v1.jinja",
     "train_path": "./formated_data/huge/splits/train.jsonl",
     "eval_path": "./formated_data/huge/splits/eval.jsonl",
     "test_path": "./formated_data/huge/splits/test.jsonl",
     
     "model_config": {
+        "huggingface_model": "NorwAI/NorwAI-Mistral-7B-instruct",
         "access_token": null,
-        "huggingface_model": "norallm/normistral-7b-warm-instruct",
         "torch_dtype": "float32",
         "load_in_4bit": false,
         "load_in_8bit": true,
@@ -18,20 +18,21 @@
     },
 
     "trainer_config": {
-        "run_name": "norallm_normistral-7b-warm-instruct",
-        "logging_dir" : "./training_logs",
+        "run_name": "NorwAI_NorwAI-Mistral-7B-instruct",
+        "logging_dir" : "./logging",
         "per_device_train_batch_size": 4,
         "per_device_eval_batch_size": 4,
         "gradient_accumulation_steps": 4,
+        "num_train_epochs": 4,
         "torch_empty_cache_steps": true,
         "lr_scheduler_type": "linear",
         "save_dir": "./local_models/",
         "logging_steps": 1,
         "output_dir": "./temp",
         "optim": "adamw_torch",
-        "num_train_epochs": 1,
         "learning_rate": 0.0001,
-        "eval_strategy": "epoch",
+        "eval_strategy": "steps",
+        "eval_steps": 20,
         "save_strategy": "no",
         "warmup_steps": 200,
         "weight_decay": 0.001,
@@ -41,12 +42,6 @@
         "seed": 42
     },
     
-    "generation_config": {
-        "max_new_tokens": 100,
-        "do_sample": false,
-        "return_token_type_ids": false
-    },
-
     "label2id": {
         "none" : 0,
         "%-BYA" : 1,
