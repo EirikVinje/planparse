@@ -176,7 +176,7 @@ def train(
                 precision
             ])
 
-        return {"accuracy": accuracy}
+        return {"accuracy": accuracy, "mean_precision" : precision}
     
     trainer = Trainer(
         callbacks=[SaveLossCallback(logdir)],
@@ -193,12 +193,12 @@ def train(
 
     print("Evaluating on test set")
     res = trainer.evaluate(testdata)
-    metrics["test_accuracy"] = res["accuracy"]
-    metrics["test_mean_precision"] = res["mean_precision"]
+    metrics["test_accuracy"] = res["eval_accuracy"]
+    metrics["test_mean_precision"] = res["eval_mean_precision"]
 
     res2 = trainer.evaluate(testdata2)
-    metrics["test_accuracy2"] = res2["accuracy"]
-    metrics["test_mean_precision2"] = res2["mean_precision"]
+    metrics["test_accuracy2"] = res2["eval_accuracy"]
+    metrics["test_mean_precision2"] = res2["eval_mean_precision"]
 
     with open(os.path.join(logdir, "results.json"), "w") as f:
         json.dump(metrics, f, indent=4)

@@ -110,12 +110,14 @@ def train(
         evaldata : CustomDataset,
         testdata : CustomDataset,
         testdata2 : CustomDataset,
-        trainer_config : Dict,
+        config : Dict,
         ):
 
+    trainer_config = config["trainer_config"]
+    
     savedir = "./local_models_storage/"
-    logdir = os.path.join(trainer_config["logging_dir"], trainer_config["run_name"] + "_" + datetime.datetime.now().strftime('%Y%m%d_%H:%M'))
-
+    logdir = os.path.join(trainer_config["logging_dir"], f"N{trainer_config['num_train_epochs']}_" + trainer_config["run_name"] + "_" + datetime.datetime.now().strftime('%Y%m%d_%H:%M'))
+    
     logger.info("Training logs and results will be saved to : {}".format(logdir))
     
     if os.path.isdir("./temp"):
@@ -170,7 +172,7 @@ def train(
                 precision
             ])
 
-        return {"accuracy": accuracy}
+        return {"accuracy": accuracy, "mean_precision" : precision}
     
     trainer = Trainer(
         callbacks=[SaveLossCallback(logdir)],
@@ -189,15 +191,19 @@ def train(
 
     print("Evaluating on 2 test sets")
     res = trainer.evaluate(testdata)
-    metrics["test_accuracy"] = res["accuracy"]
-    metrics["test_mean_precision"] = res["mean_precision"]
+
+    metrics["test_accuracy"] = res["eval_accuracy"]
+    metrics["test_mean_precision"] = res["eval_mean_precision"]
     
     res2 = trainer.evaluate(testdata2)
-    metrics["test_accuracy2"] = res2["accuracy"]
-    metrics["test_mean_precision2"] = res2["mean_precision"]
+    metrics["test_accuracy2"] = res2["eval_accuracy"]
+    metrics["test_mean_precision2"] = res2["eval_mean_precision"]
 
     with open(os.path.join(logdir, "results.json"), "w") as f:
         json.dump(metrics, f, indent=4)
+
+    with open(os.path.join(logdir, "config.json"), "w") as f:
+        json.dump(config, f, indent=4)
 
     logger.info("Training logs and results saved to : {}".format(os.path.join(logdir, "results.json")))
 
@@ -216,6 +222,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--smoke", action='store_true', help="Run a small dataset for testing")
     parser.add_argument("--config", type=str, help="path to model config", required=True)
+    parser.add_argument("--epochs", type=int, help="n epochs", required=False)
     args = parser.parse_args()
 
     if torch.cuda.is_available():
@@ -226,7 +233,9 @@ if __name__ == "__main__":
         config = json.load(f)
 
     model_config = config["model_config"]
-    trainer_config = config["trainer_config"]
+
+    if args.epochs:
+        config["trainer_config"]["num_train_epochs"] = args.epochs
 
     model = AutoModelForSequenceClassification.from_pretrained(
             pretrained_model_name_or_path=model_config["huggingface_model"],
@@ -247,6 +256,7 @@ if __name__ == "__main__":
         train_path = "./formated_data/smoke/train_smoke.jsonl"
         eval_path = "./formated_data/smoke/eval_smoke.jsonl"
         test_path = "./formated_data/smoke/eval_smoke.jsonl"
+        test_path2 = "./formated_data/smoke/eval_smoke.jsonl"
          
     
     else:
@@ -275,7 +285,7 @@ if __name__ == "__main__":
     test_dataset2 = CustomDataset(tokenized_test_x2, test_y2)
 
     train(
-        trainer_config=trainer_config,
+        config=config,
         traindata=train_dataset,
         evaldata=eval_dataset,
         testdata=test_dataset,
