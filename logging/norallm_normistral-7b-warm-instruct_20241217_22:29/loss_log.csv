@@ -1,0 +1,5 @@
+Step,Loss,Learning Rate,Epoch,Global Step,accuracy,mean_precision
+1,0.2932,5.000000000000001e-07,1.0,1,N/A,N/A
+2,0.2932,1.0000000000000002e-06,2.0,2,N/A,N/A
+N/A,N/A,N/A,N/A,N/A,0.0,0.0
+N/A,N/A,N/A,N/A,N/A,0.0,0.0

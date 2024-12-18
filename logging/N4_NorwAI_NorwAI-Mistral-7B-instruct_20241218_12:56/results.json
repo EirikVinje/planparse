@@ -1,0 +1,12 @@
+{
+    "train_runtime": 4165.6759,
+    "train_samples_per_second": 0.897,
+    "train_steps_per_second": 0.056,
+    "total_flos": 0.0,
+    "train_loss": 1.0681326240959517,
+    "epoch": 3.9401709401709404,
+    "test_accuracy": 0.9850187265917603,
+    "test_mean_precision": 0.9831165158371041,
+    "test_accuracy2": 0.9782608695652174,
+    "test_mean_precision2": 0.9800000000000001
+}
