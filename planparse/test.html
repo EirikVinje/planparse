@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>FCNN Example</title>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <script src="path/to/NN-SVG/FCNN.js"></script>
+</head>
+<body>
+    <div id="fcnn-diagram"></div>
+    <script>
+        // Example configuration for an FCNN
+        const config = {
+            inputLayer: 10,
+            hiddenLayers: [20, 15, 10],
+            outputLayer: 5,
+            layerSpacing: 100,
+            nodeSize: 30
+        };
+
+        // Generate the FCNN diagram
+        generateFCNN('#fcnn-diagram', config);
+    </script>
+</body>
+</html>

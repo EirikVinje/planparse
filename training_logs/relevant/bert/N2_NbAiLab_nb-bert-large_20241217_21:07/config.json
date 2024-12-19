@@ -1,0 +1,42 @@
+{
+    "config_name": "nb_bert_large",
+    "train_path": "./formated_data/huge/splits/train.jsonl",
+    "eval_path": "./formated_data/huge/splits/eval.jsonl",
+    "test_path": "./formated_data/huge/splits/test.jsonl",
+    "model_config": {
+        "huggingface_model": "NbAiLab/nb-bert-large",
+        "trust_remote_code": true,
+        "device": "cuda",
+        "label2id": {
+            "none": 0,
+            "%-BYA": 1,
+            "BYA": 2,
+            "BRA": 3,
+            "%-BRA": 4
+        }
+    },
+    "trainer_config": {
+        "run_name": "NbAiLab_nb-bert-large",
+        "logging_dir": "./logging",
+        "per_device_train_batch_size": 4,
+        "gradient_accumulation_steps": 4,
+        "torch_empty_cache_steps": true,
+        "per_device_eval_batch_size": 4,
+        "save_dir": "./local_models/",
+        "lr_scheduler_type": "linear",
+        "eval_strategy": "steps",
+        "learning_rate": 0.0001,
+        "optim": "adamw_torch",
+        "output_dir": "./temp",
+        "num_train_epochs": 2,
+        "save_strategy": "no",
+        "weight_decay": 0.001,
+        "warmup_steps": 200,
+        "report_to": "none",
+        "logging_steps": 1,
+        "eval_steps": 20,
+        "max_steps": -1,
+        "data_seed": 42,
+        "seed": 42
+    }
+}
